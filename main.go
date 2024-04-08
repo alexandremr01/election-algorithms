@@ -8,13 +8,14 @@ import (
 	"net/http"
 	"net"
 	"time"
+	"strconv"
 )
 
-type Server struct { }
+type Server struct {NodeID string}
 
 type HearbeatArgs struct {Sender string}
-func (t *Server) SendHeartbeat(args *HearbeatArgs, reply *int64) error {
-    fmt.Printf("Received heartbeat from %s\n", args.Sender)
+func (s *Server) SendHeartbeat(args *HearbeatArgs, reply *int64) error {
+    log.Printf("Node %s: Received heartbeat from node %s\n", s.NodeID, args.Sender)
     return nil
 }
 
@@ -23,12 +24,16 @@ func main() {
 
 	port := os.Getenv("PORT")
 	nodeID := os.Getenv("NODE_ID")
+	heartbeatTime, err := strconv.Atoi(os.Getenv("HEARTBEAT_TIME"))
+	if err != nil {
+		log.Fatal("error parsing heartbeat time:", err)
+	}
 
-    fmt.Printf("My IDs: %s\n", nodeID)
+    log.Printf("My ID: %s\n", nodeID)
 
 	go func() {
 		clients := make(map[string]*rpc.Client)
-		time.Sleep(2* time.Second)
+		time.Sleep(time.Duration(heartbeatTime) * time.Second)
 		for _, id := range ids {
 			if id == nodeID {
 				continue
@@ -61,7 +66,7 @@ func main() {
 		}
     }()
 	
-	server := new(Server)
+	server := &Server{NodeID: nodeID}
 	rpc.Register(server)
 	rpc.HandleHTTP()
 
