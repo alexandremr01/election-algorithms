@@ -12,26 +12,26 @@ x-common:
     - elections
   volumes:
     - .:/app
-  command:
-    - /app/bin/process
+  command: go run /app/main.go
+  environment:
+    &common-env
+    PORT: 8000
 
 services:
   p1:
     <<: *common
     environment:
-      PORT: 8002
+      <<: *common-env
       NODE_ID: 1
-    ports:
-      - "8002:8002/tcp"
 
   p2:
     <<: *common
     environment:
-      PORT: 8003
+      <<: *common-env
       NODE_ID: 2
 
   p3:
     <<: *common
     environment:
-      PORT: 8004
+      <<: *common-env
       NODE_ID: 3
