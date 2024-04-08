@@ -1,0 +1,37 @@
+version: '3.7'
+
+networks:
+  elections: { }
+
+x-common:
+  &common
+  build:
+      context: .
+      dockerfile: Dockerfile
+  networks:
+    - elections
+  volumes:
+    - .:/app
+  command:
+    - /app/bin/process
+
+services:
+  p1:
+    <<: *common
+    environment:
+      PORT: 8002
+      NODE_ID: 1
+    ports:
+      - "8002:8002/tcp"
+
+  p2:
+    <<: *common
+    environment:
+      PORT: 8003
+      NODE_ID: 2
+
+  p3:
+    <<: *common
+    environment:
+      PORT: 8004
+      NODE_ID: 3
