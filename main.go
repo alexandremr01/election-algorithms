@@ -48,19 +48,11 @@ func (s *Server) NotifyNewCoordinator(args *NotifyNewCoordinatorArgs, reply *int
 
 func (s *Server) CallForElection(args *ElectionArgs, reply *int64) error {
     log.Printf("Node %d: Received call for elections from node %d\n", s.NodeID, args.Sender)
-	client, ok := s.Connection.Clients[args.Sender]
-	if !ok {
-		log.Printf("Node %d: Node %d not connected\n", s.NodeID, args.Sender)
-		return nil
-	}
-	err := client.Call(
+	s.Connection.Send(
+		args.Sender,
 		"Server.RespondElection", 
 		RespondElectionArgs{Sender: s.NodeID},
-		nil,
 	)
-	if err != nil {
-		log.Printf("Node %d: Error communicating with node %d: %s", s.NodeID, args.Sender, err)
-	}
 	if !s.Elections.Happening{
 		s.Elections.Start()
 	}
@@ -117,13 +109,13 @@ func (e *Elections) Start() {
 }
 
 type Connection struct {
-	Clients map[int]*rpc.Client
+	clients map[int]*rpc.Client
 	nodeID int
 }
 func NewConnection(nodeID int) *Connection{
 	return &Connection{
 		nodeID: nodeID,
-		Clients: make(map[int]*rpc.Client),
+		clients: make(map[int]*rpc.Client),
 	}
 }
 
@@ -133,11 +125,8 @@ func (c *Connection) Init(ids []int) {
 			continue
 		}
 		hostname := fmt.Sprintf("p%d:8000", id)
-		client, err := rpc.DialHTTP("tcp", hostname)
-		if err != nil {
-			log.Fatal("dialing:", err)
-		}
-		c.Clients[id] = client
+		client, _ := rpc.DialHTTP("tcp", hostname)
+		c.clients[id] = client // can be nil
 	}
 }
 
@@ -146,12 +135,24 @@ func (c *Connection) Broadcast(ids []int, serviceMethod string, args any){
 		if id == c.nodeID {
 			continue
 		}
-		_ =  c.Clients[id].Call(serviceMethod, args, nil)
+		c.Send(id, serviceMethod, args)
+	}
+}
+
+func (c *Connection) Send(id int, serviceMethod string, args any) {
+	// tries to connect - not guaranteed
+	if c.clients[id] == nil {
+		hostname := fmt.Sprintf("p%d:8000", id)
+		client, _ := rpc.DialHTTP("tcp", hostname)
+		c.clients[id] = client
+	}
+	if c.clients[id] != nil {
+		_ =  c.clients[id].Call(serviceMethod, args, nil)
 	}
 }
 
 func main() {
-	ids := []int{1, 2, 3}
+	ids := []int{1, 2, 3, 4}
 	nodeID, err := strconv.Atoi(os.Getenv("NODE_ID")) 
 	if err != nil {
 		log.Fatal("error parsing node id:", err)
@@ -196,6 +197,7 @@ func main() {
 	go func() {
 		time.Sleep(heartbeatTimeDuration)
 		connection.Init(ids[:])
+		elections.Start()
 
 		for {
 			if (nodeID == coordinator.ID) {
