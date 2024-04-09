@@ -19,8 +19,8 @@ type Server struct {
 	NodeID int 
 	LastHearbeat *time.Time
 	Connection *Connection
-	ElectionHadResponse bool
 	Coordinator *Coordinator
+	Elections *Elections
 }
 
 type HearbeatArgs struct {Sender int}
@@ -36,7 +36,7 @@ func (s *Server) SendHeartbeat(args *HearbeatArgs, reply *int64) error {
 
 func (s *Server) RespondElection(args *RespondElectionArgs, reply *int64) error {
     log.Printf("Node %d: Received OK from node %d\n", s.NodeID, args.Sender)
-	s.ElectionHadResponse = true
+	s.Elections.Answered = true
     return nil
 }
 
@@ -62,7 +62,57 @@ func (s *Server) CallForElection(args *ElectionArgs, reply *int64) error {
 		log.Printf("Node %d: Error communicating with node %d: %s", s.NodeID, args.Sender, err)
 	}
 	// TODO: initiates an election
+	s.Elections.Start()
     return nil
+}
+
+type Elections struct {
+	Happening bool
+	Answered bool
+
+	coordinator *Coordinator
+	connection *Connection
+
+	nodeID int
+	electionDuration time.Duration
+	higherIds []int
+	ids []int
+}
+
+func NewElections(ids []int, nodeID int, coordinator *Coordinator, connection *Connection, electionDuration time.Duration) *Elections {
+	var higherIds []int
+	for _, id := range ids {
+		if id > nodeID {
+			higherIds = append(higherIds, id)
+		}
+	}
+	return &Elections{
+		Happening: false,
+		Answered: false,
+		higherIds: higherIds,
+		ids: ids,
+		nodeID: nodeID,
+		coordinator: coordinator,
+		connection: connection,
+		electionDuration: electionDuration,
+	}
+}
+
+func (e *Elections) Start() {
+	e.Answered = false
+	e.Happening = true
+
+	e.connection.Broadcast(e.higherIds[:], "Server.CallForElection", ElectionArgs{Sender: e.nodeID})
+	time.Sleep(e.electionDuration)
+	if e.Answered {
+		log.Printf("Node %d: Election finished with responses, going back to normal.", e.nodeID)
+	} else {
+		e.coordinator.ID = e.nodeID
+		e.connection.Broadcast(e.ids[:], "Server.NotifyNewCoordinator", NotifyNewCoordinatorArgs{Sender: e.nodeID})
+		log.Printf("Node %d: Election finished without responses, becoming leader.", e.nodeID)
+	}
+
+	e.Happening = false
 }
 
 type Connection struct {
@@ -100,20 +150,16 @@ func (c *Connection) Broadcast(ids []int, serviceMethod string, args any){
 }
 
 func main() {
-	ids := [3]int{1, 2, 3}
+	ids := []int{1, 2, 3}
 	nodeID, err := strconv.Atoi(os.Getenv("NODE_ID")) 
 	if err != nil {
 		log.Fatal("error parsing node id:", err)
 	}
 
-	var higherIds []int
 	leader := -1
 	for _, id := range ids {
 		if id > leader {
 			leader = id
-		}
-		if id > nodeID {
-			higherIds = append(higherIds, id)
 		}
 	}
 	coordinator := &Coordinator{ID: leader}
@@ -142,7 +188,9 @@ func main() {
     log.Printf("My ID: %d\n", nodeID)
 
 	connection := NewConnection(nodeID)
-	server := &Server{NodeID: nodeID, Connection: connection, Coordinator: coordinator}
+	elections := NewElections(ids, nodeID, coordinator, connection, electionDuration)
+
+	server := &Server{NodeID: nodeID, Connection: connection, Coordinator: coordinator, Elections: elections}
 
 	go func() {
 		time.Sleep(heartbeatTimeDuration)
@@ -156,16 +204,7 @@ func main() {
 				time.Sleep(timeoutDuration)
 				if (server.LastHearbeat == nil) || (time.Now().Sub(*server.LastHearbeat) > timeoutDuration) {
 					log.Printf("Leader timed out")
-					server.ElectionHadResponse = false
-					connection.Broadcast(higherIds[:], "Server.CallForElection", ElectionArgs{Sender: nodeID})
-					time.Sleep(electionDuration)
-					if server.ElectionHadResponse {
-						log.Printf("Node %d: Election finished with responses, going back to normal.", nodeID)
-					} else {
-						coordinator.ID = nodeID
-						connection.Broadcast(ids[:], "Server.NotifyNewCoordinator", NotifyNewCoordinatorArgs{Sender: nodeID})
-						log.Printf("Node %d: Election finished without responses, becoming leader.", nodeID)
-					}
+					elections.Start()					
 				}			
 			}
 		}
