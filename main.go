@@ -11,16 +11,22 @@ import (
 	"strconv"
 )
 
+type Coordinator struct {
+	ID int
+}
+
 type Server struct {
 	NodeID int 
 	LastHearbeat *time.Time
 	Clients map[int]*rpc.Client
 	ElectionHadResponse bool
+	Coordinator *Coordinator
 }
 
 type HearbeatArgs struct {Sender int}
 type ElectionArgs struct {Sender int}
 type RespondElectionArgs struct {Sender int}
+type NotifyNewCoordinatorArgs struct {Sender int}
 func (s *Server) SendHeartbeat(args *HearbeatArgs, reply *int64) error {
     log.Printf("Node %d: Received heartbeat from node %d\n", s.NodeID, args.Sender)
 	now := time.Now()
@@ -31,6 +37,12 @@ func (s *Server) SendHeartbeat(args *HearbeatArgs, reply *int64) error {
 func (s *Server) RespondElection(args *RespondElectionArgs, reply *int64) error {
     log.Printf("Node %d: Received OK from node %d\n", s.NodeID, args.Sender)
 	s.ElectionHadResponse = true
+    return nil
+}
+
+func (s *Server) NotifyNewCoordinator(args *NotifyNewCoordinatorArgs, reply *int64) error {
+    log.Printf("Node %d: Received NewCoordinator from node %d\n", s.NodeID, args.Sender)
+	s.Coordinator.ID = args.Sender
     return nil
 }
 
@@ -61,6 +73,7 @@ func main() {
 			leader = id
 		}
 	}
+	coordinator := &Coordinator{ID: leader}
 
 	port := os.Getenv("PORT")
 	nodeID, err := strconv.Atoi(os.Getenv("NODE_ID")) 
@@ -89,7 +102,7 @@ func main() {
 
     log.Printf("My ID: %d\n", nodeID)
 	clients := make(map[int]*rpc.Client)
-	server := &Server{NodeID: nodeID, Clients: clients}
+	server := &Server{NodeID: nodeID, Clients: clients, Coordinator: coordinator}
 
 	go func() {
 		time.Sleep(heartbeatTimeDuration)
@@ -106,7 +119,7 @@ func main() {
 		}
 
 		for {
-			if (nodeID == leader) {
+			if (nodeID == coordinator.ID) {
 				time.Sleep(2* time.Second)
 				for _, id := range ids {
 					if id == nodeID {
@@ -140,7 +153,20 @@ func main() {
 					if server.ElectionHadResponse {
 						log.Printf("Node %d: Election finished with responses, going back to normal.", nodeID)
 					} else {
-						leader = nodeID
+						coordinator.ID = nodeID
+						for _, id := range ids {					
+							if id == nodeID {
+								continue
+							}
+							err := clients[id].Call(
+								"Server.NotifyNewCoordinator", 
+								NotifyNewCoordinatorArgs{Sender: nodeID},
+								nil,
+							)
+							if err != nil {
+								log.Printf("Node %d: Error communicating with node %d: %s", nodeID, id, err)
+							}
+						}
 						log.Printf("Node %d: Election finished without responses, becoming leader.", nodeID)
 					}
 				}			
