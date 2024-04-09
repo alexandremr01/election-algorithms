@@ -1,211 +1,50 @@
 package main
 
 import (
-	"fmt"
-	"os"
 	"log"
 	"net/rpc"
 	"net/http"
 	"net"
 	"time"
-	"strconv"
+
+	"github.com/alexandremr01/user-elections/config"
+	"github.com/alexandremr01/user-elections/server"
+	"github.com/alexandremr01/user-elections/client"
+	"github.com/alexandremr01/user-elections/algorithms"
+	"github.com/alexandremr01/user-elections/messages"
 )
-
-type Coordinator struct {
-	ID int
-}
-
-type Server struct {
-	NodeID int 
-	LastHearbeat *time.Time
-	Connection *Connection
-	Coordinator *Coordinator
-	Elections *Elections
-}
-
-type HearbeatArgs struct {Sender int}
-type ElectionArgs struct {Sender int}
-type RespondElectionArgs struct {Sender int}
-type NotifyNewCoordinatorArgs struct {Sender int}
-func (s *Server) SendHeartbeat(args *HearbeatArgs, reply *int64) error {
-    log.Printf("Node %d: Received heartbeat from node %d\n", s.NodeID, args.Sender)
-	now := time.Now()
-	s.LastHearbeat = &now
-    return nil
-}
-
-func (s *Server) RespondElection(args *RespondElectionArgs, reply *int64) error {
-    log.Printf("Node %d: Received OK from node %d\n", s.NodeID, args.Sender)
-	s.Elections.Answered = true
-    return nil
-}
-
-func (s *Server) NotifyNewCoordinator(args *NotifyNewCoordinatorArgs, reply *int64) error {
-    log.Printf("Node %d: Received NewCoordinator from node %d\n", s.NodeID, args.Sender)
-	s.Coordinator.ID = args.Sender
-    return nil
-}
-
-func (s *Server) CallForElection(args *ElectionArgs, reply *int64) error {
-    log.Printf("Node %d: Received call for elections from node %d\n", s.NodeID, args.Sender)
-	s.Connection.Send(
-		args.Sender,
-		"Server.RespondElection", 
-		RespondElectionArgs{Sender: s.NodeID},
-	)
-	if !s.Elections.Happening{
-		s.Elections.Start()
-	}
-    return nil
-}
-
-type Elections struct {
-	Happening bool
-	Answered bool
-
-	coordinator *Coordinator
-	connection *Connection
-
-	nodeID int
-	electionDuration time.Duration
-	higherIds []int
-	ids []int
-}
-
-func NewElections(ids []int, nodeID int, coordinator *Coordinator, connection *Connection, electionDuration time.Duration) *Elections {
-	var higherIds []int
-	for _, id := range ids {
-		if id > nodeID {
-			higherIds = append(higherIds, id)
-		}
-	}
-	return &Elections{
-		Happening: false,
-		Answered: false,
-		higherIds: higherIds,
-		ids: ids,
-		nodeID: nodeID,
-		coordinator: coordinator,
-		connection: connection,
-		electionDuration: electionDuration,
-	}
-}
-
-func (e *Elections) Start() {
-	e.Answered = false
-	e.Happening = true
-
-	e.connection.Broadcast(e.higherIds[:], "Server.CallForElection", ElectionArgs{Sender: e.nodeID})
-	time.Sleep(e.electionDuration)
-	if e.Answered {
-		log.Printf("Node %d: Election finished with responses, going back to normal.", e.nodeID)
-	} else {
-		e.coordinator.ID = e.nodeID
-		e.connection.Broadcast(e.ids[:], "Server.NotifyNewCoordinator", NotifyNewCoordinatorArgs{Sender: e.nodeID})
-		log.Printf("Node %d: Election finished without responses, becoming leader.", e.nodeID)
-	}
-
-	e.Happening = false
-}
-
-type Connection struct {
-	clients map[int]*rpc.Client
-	nodeID int
-}
-func NewConnection(nodeID int) *Connection{
-	return &Connection{
-		nodeID: nodeID,
-		clients: make(map[int]*rpc.Client),
-	}
-}
-
-func (c *Connection) Init(ids []int) {
-	for _, id := range ids {
-		if id == c.nodeID {
-			continue
-		}
-		hostname := fmt.Sprintf("p%d:8000", id)
-		client, _ := rpc.DialHTTP("tcp", hostname)
-		c.clients[id] = client // can be nil
-	}
-}
-
-func (c *Connection) Broadcast(ids []int, serviceMethod string, args any){
-	for _, id := range ids {
-		if id == c.nodeID {
-			continue
-		}
-		c.Send(id, serviceMethod, args)
-	}
-}
-
-func (c *Connection) Send(id int, serviceMethod string, args any) {
-	// tries to connect - not guaranteed
-	if c.clients[id] == nil {
-		hostname := fmt.Sprintf("p%d:8000", id)
-		client, _ := rpc.DialHTTP("tcp", hostname)
-		c.clients[id] = client
-	}
-	if c.clients[id] != nil {
-		_ =  c.clients[id].Call(serviceMethod, args, nil)
-	}
-}
 
 func main() {
 	ids := []int{1, 2, 3, 4}
-	nodeID, err := strconv.Atoi(os.Getenv("NODE_ID")) 
-	if err != nil {
-		log.Fatal("error parsing node id:", err)
-	}
 
+	config, err := config.GetConfig()
+	if err != nil {
+		log.Fatal("error parsing config: ", err)
+	}
+    log.Printf("My ID: %d\n", config.NodeID)
+	
 	leader := -1
 	for _, id := range ids {
 		if id > leader {
 			leader = id
 		}
 	}
-	coordinator := &Coordinator{ID: leader}
 
-	port := os.Getenv("PORT")
-	
-	timeout, err := strconv.Atoi(os.Getenv("NODE_TIMEOUT"))
-	if err != nil {
-		log.Fatal("error parsing timeout:", err)
-	}
-	timeoutDuration := time.Duration(timeout)*time.Millisecond
-
-	electionTimeout, err := strconv.Atoi(os.Getenv("ELECTION_TIMEOUT"))
-	if err != nil {
-		log.Fatal("error parsing election timeout:", err)
-	}
-	electionDuration := time.Duration(electionTimeout)*time.Millisecond
-
-	heartbeatTime, err := strconv.Atoi(os.Getenv("HEARTBEAT_TIME"))
-	if err != nil {
-		log.Fatal("error parsing heartbeat time:", err)
-	}
-	heartbeatTimeDuration := time.Duration(heartbeatTime)*time.Second
-
-
-    log.Printf("My ID: %d\n", nodeID)
-
-	connection := NewConnection(nodeID)
-	elections := NewElections(ids, nodeID, coordinator, connection, electionDuration)
-
-	server := &Server{NodeID: nodeID, Connection: connection, Coordinator: coordinator, Elections: elections}
+	connection := client.NewClient(config.NodeID)
+	elections := algorithms.NewElections(ids, config.NodeID, leader, connection, config.ElectionDuration)
+	server := server.NewServer(config.NodeID, connection, elections)
 
 	go func() {
-		time.Sleep(heartbeatTimeDuration)
+		time.Sleep(config.HeartbeatDuration)
 		connection.Init(ids[:])
 		elections.Start()
-
 		for {
-			if (nodeID == coordinator.ID) {
-				time.Sleep(2* time.Second)
-				connection.Broadcast(ids[:], "Server.SendHeartbeat", HearbeatArgs{Sender: nodeID})
+			if (config.NodeID == elections.CoordinatorID) {
+				time.Sleep(config.HeartbeatDuration)
+				connection.Broadcast(ids[:], "Server.SendHeartbeat", messages.HearbeatArgs{Sender: config.NodeID})
 			} else {
-				time.Sleep(timeoutDuration)
-				if (server.LastHearbeat == nil) || (time.Now().Sub(*server.LastHearbeat) > timeoutDuration) {
+				time.Sleep(config.TimeoutDuration)
+				if (server.LastHearbeat == nil) || (time.Now().Sub(*server.LastHearbeat) > config.TimeoutDuration) {
 					log.Printf("Leader timed out")
 					elections.Start()					
 				}			
@@ -216,7 +55,7 @@ func main() {
 	rpc.Register(server)
 	rpc.HandleHTTP()
 
-	l, e := net.Listen("tcp", ":"+port)
+	l, e := net.Listen("tcp", ":"+config.Port)
 	if e != nil {
 		log.Fatal("listen error:", e)
 	}
