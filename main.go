@@ -61,8 +61,9 @@ func (s *Server) CallForElection(args *ElectionArgs, reply *int64) error {
 	if err != nil {
 		log.Printf("Node %d: Error communicating with node %d: %s", s.NodeID, args.Sender, err)
 	}
-	// TODO: initiates an election
-	s.Elections.Start()
+	if !s.Elections.Happening{
+		s.Elections.Start()
+	}
     return nil
 }
 
