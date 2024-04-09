@@ -17,6 +17,7 @@ x-common:
     &common-env
     PORT: 8000
     HEARTBEAT_TIME: 2 # seconds
+    ELECTION_TIMEOUT: 5000 # ms
 
 services:
   p1:
