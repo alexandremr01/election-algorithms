@@ -12,33 +12,33 @@ import (
 )
 
 type Server struct {
-	NodeID string 
+	NodeID int 
 	LastHearbeat *time.Time
-	Clients map[string]*rpc.Client
+	Clients map[int]*rpc.Client
 	ElectionHadResponse bool
 }
 
-type HearbeatArgs struct {Sender string}
-type ElectionArgs struct {Sender string}
-type RespondElectionArgs struct {Sender string}
+type HearbeatArgs struct {Sender int}
+type ElectionArgs struct {Sender int}
+type RespondElectionArgs struct {Sender int}
 func (s *Server) SendHeartbeat(args *HearbeatArgs, reply *int64) error {
-    log.Printf("Node %s: Received heartbeat from node %s\n", s.NodeID, args.Sender)
+    log.Printf("Node %d: Received heartbeat from node %d\n", s.NodeID, args.Sender)
 	now := time.Now()
 	s.LastHearbeat = &now
     return nil
 }
 
 func (s *Server) RespondElection(args *RespondElectionArgs, reply *int64) error {
-    log.Printf("Node %s: Received OK from node %s\n", s.NodeID, args.Sender)
+    log.Printf("Node %d: Received OK from node %d\n", s.NodeID, args.Sender)
 	s.ElectionHadResponse = true
     return nil
 }
 
 func (s *Server) CallForElection(args *ElectionArgs, reply *int64) error {
-    log.Printf("Node %s: Received call for elections from node %s\n", s.NodeID, args.Sender)
+    log.Printf("Node %d: Received call for elections from node %d\n", s.NodeID, args.Sender)
 	client, ok := s.Clients[args.Sender]
 	if !ok {
-		log.Printf("Node %s: Node %s not connected\n", s.NodeID, args.Sender)
+		log.Printf("Node %d: Node %d not connected\n", s.NodeID, args.Sender)
 		return nil
 	}
 	err := client.Call(
@@ -47,19 +47,23 @@ func (s *Server) CallForElection(args *ElectionArgs, reply *int64) error {
 		nil,
 	)
 	if err != nil {
-		log.Printf("Node %s: Error communicating with node %s: %s", s.NodeID, args.Sender, err)
+		log.Printf("Node %d: Error communicating with node %d: %s", s.NodeID, args.Sender, err)
 	}
 	// TODO: initiates an election
     return nil
 }
 
 func main() {
-	ids := [3]string{"1", "2", "3"}
-	numIds := [3]int{1, 2, 3}
+	ids := [3]int{1, 2, 3}
+	leader := -1
+	for _, id := range ids {
+		if id > leader {
+			leader = id
+		}
+	}
 
 	port := os.Getenv("PORT")
-	nodeID := os.Getenv("NODE_ID")
-	myID, err := strconv.Atoi(nodeID) 
+	nodeID, err := strconv.Atoi(os.Getenv("NODE_ID")) 
 	if err != nil {
 		log.Fatal("error parsing node id:", err)
 	}
@@ -83,8 +87,8 @@ func main() {
 	heartbeatTimeDuration := time.Duration(heartbeatTime)*time.Second
 
 
-    log.Printf("My ID: %s\n", nodeID)
-	clients := make(map[string]*rpc.Client)
+    log.Printf("My ID: %d\n", nodeID)
+	clients := make(map[int]*rpc.Client)
 	server := &Server{NodeID: nodeID, Clients: clients}
 
 	go func() {
@@ -93,7 +97,7 @@ func main() {
 			if id == nodeID {
 				continue
 			}
-			hostname := fmt.Sprintf("p%s:%s", id, port)
+			hostname := fmt.Sprintf("p%d:%s", id, port)
 			client, err := rpc.DialHTTP("tcp", hostname)
 			if err != nil {
 				log.Fatal("dialing:", err)
@@ -101,33 +105,26 @@ func main() {
 			clients[id] = client
 		}
 
-		if (nodeID == "3") {
-			for {
+		for {
+			if (nodeID == leader) {
 				time.Sleep(2* time.Second)
 				for _, id := range ids {
 					if id == nodeID {
 						continue
 					}
-					err := clients[id].Call(
+					_ =  clients[id].Call(
 						"Server.SendHeartbeat", 
 						HearbeatArgs{Sender: nodeID},
 						nil,
 					)
-					if err != nil {
-						log.Fatal(err)
-					}
 				}
-			}
-		} else {
-			for {
+			} else {
 				time.Sleep(timeoutDuration)
 				if (server.LastHearbeat == nil) || (time.Now().Sub(*server.LastHearbeat) > timeoutDuration) {
 					log.Printf("Leader timed out")
 					server.ElectionHadResponse = false
-					for _, numID := range numIds {
-						id := strconv.Itoa(numID)
-					
-						if id == nodeID || numID < myID {
+					for _, id := range ids {					
+						if id <= nodeID {
 							continue
 						}
 						err := clients[id].Call(
@@ -136,15 +133,15 @@ func main() {
 							nil,
 						)
 						if err != nil {
-							log.Printf("Node %s: Error communicating with node %s: %s", nodeID, id, err)
+							log.Printf("Node %d: Error communicating with node %d: %s", nodeID, id, err)
 						}
 					}
 					time.Sleep(electionDuration)
 					if server.ElectionHadResponse {
-						log.Printf("Node %s: Election finished with responses, going back to normal.", nodeID)
+						log.Printf("Node %d: Election finished with responses, going back to normal.", nodeID)
 					} else {
-						// TODO: becomes leader
-						log.Printf("Node %s: Election finished without responses, becoming leader.", nodeID)
+						leader = nodeID
+						log.Printf("Node %d: Election finished without responses, becoming leader.", nodeID)
 					}
 				}			
 			}
