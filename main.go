@@ -11,11 +11,16 @@ import (
 	"strconv"
 )
 
-type Server struct {NodeID string}
+type Server struct {
+	NodeID string 
+	LastHearbeat *time.Time
+}
 
 type HearbeatArgs struct {Sender string}
 func (s *Server) SendHeartbeat(args *HearbeatArgs, reply *int64) error {
     log.Printf("Node %s: Received heartbeat from node %s\n", s.NodeID, args.Sender)
+	now := time.Now()
+	s.LastHearbeat = &now
     return nil
 }
 
@@ -24,16 +29,24 @@ func main() {
 
 	port := os.Getenv("PORT")
 	nodeID := os.Getenv("NODE_ID")
+	timeout, err := strconv.Atoi(os.Getenv("NODE_TIMEOUT"))
+	if err != nil {
+		log.Fatal("error parsing timeout:", err)
+	}
+	timeoutDuration := time.Duration(timeout)*time.Millisecond
 	heartbeatTime, err := strconv.Atoi(os.Getenv("HEARTBEAT_TIME"))
 	if err != nil {
 		log.Fatal("error parsing heartbeat time:", err)
 	}
+	heartbeatTimeDuration := time.Duration(heartbeatTime)*time.Second
+
 
     log.Printf("My ID: %s\n", nodeID)
+	server := &Server{NodeID: nodeID}
 
 	go func() {
 		clients := make(map[string]*rpc.Client)
-		time.Sleep(time.Duration(heartbeatTime) * time.Second)
+		time.Sleep(heartbeatTimeDuration)
 		for _, id := range ids {
 			if id == nodeID {
 				continue
@@ -63,10 +76,16 @@ func main() {
 					}
 				}
 			}
+		} else {
+			for {
+				if (server.LastHearbeat == nil) || (time.Now().Sub(*server.LastHearbeat) > timeoutDuration) {
+					log.Printf("Leader timed out")
+				}
+				time.Sleep(timeoutDuration)
+			}
 		}
     }()
 	
-	server := &Server{NodeID: nodeID}
 	rpc.Register(server)
 	rpc.HandleHTTP()
 
