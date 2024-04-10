@@ -1,4 +1,4 @@
-package algorithms
+package bully
 
 import (
 	"log"
@@ -7,7 +7,7 @@ import (
 	"time"
 )
  
-type Elections struct {
+type BullyElections struct {
 	Happening bool
 	Answered bool
 	CoordinatorID int
@@ -20,14 +20,14 @@ type Elections struct {
 	ids []int
 }
 
-func NewElections(ids []int, nodeID int, coordinatorID int, connection *client.Client, electionDuration time.Duration) *Elections {
+func NewBullyElections(ids []int, nodeID int, coordinatorID int, connection *client.Client, electionDuration time.Duration) *BullyElections {
 	var higherIds []int
 	for _, id := range ids {
 		if id > nodeID {
 			higherIds = append(higherIds, id)
 		}
 	}
-	return &Elections{
+	return &BullyElections{
 		Happening: false,
 		Answered: false,
 		higherIds: higherIds,
@@ -39,7 +39,11 @@ func NewElections(ids []int, nodeID int, coordinatorID int, connection *client.C
 	}
 }
 
-func (e *Elections) Start() {
+func (e *BullyElections) InitializeNode() {
+	e.StartElections()
+}
+
+func (e *BullyElections) StartElections() {
 	e.Answered = false
 	e.Happening = true
 

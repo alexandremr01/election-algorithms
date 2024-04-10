@@ -8,9 +8,8 @@ import (
 	"time"
 
 	"github.com/alexandremr01/user-elections/config"
-	"github.com/alexandremr01/user-elections/server"
 	"github.com/alexandremr01/user-elections/client"
-	"github.com/alexandremr01/user-elections/algorithms"
+	"github.com/alexandremr01/user-elections/algorithms/bully"
 	"github.com/alexandremr01/user-elections/messages"
 )
 
@@ -31,23 +30,22 @@ func main() {
 	}
 
 	connection := client.NewClient(config.NodeID)
-	elections := algorithms.NewElections(ids, config.NodeID, leader, connection, config.ElectionDuration)
-	server := server.NewServer(config.NodeID, connection, elections)
+	algorithm := bully.NewBullyElections(ids, config.NodeID, leader, connection, config.ElectionDuration)
+	server := bully.NewServer(config.NodeID, connection, algorithm)
 
 	go func() {
-		time.Sleep(config.HeartbeatDuration)
 		connection.Init(ids[:])
-		elections.Start()
+		algorithm.InitializeNode()
 		for {
-			if (config.NodeID == elections.CoordinatorID) {
-				time.Sleep(config.HeartbeatDuration)
+			if (config.NodeID == algorithm.CoordinatorID) {
 				connection.Broadcast(ids[:], "Server.SendHeartbeat", messages.HearbeatArgs{Sender: config.NodeID})
+				time.Sleep(config.HeartbeatDuration)
 			} else {
-				time.Sleep(config.TimeoutDuration)
 				if (server.LastHearbeat == nil) || (time.Now().Sub(*server.LastHearbeat) > config.TimeoutDuration) {
 					log.Printf("Leader timed out")
-					elections.Start()					
+					algorithm.StartElections()					
 				}			
+				time.Sleep(config.TimeoutDuration)
 			}
 		}
     }()

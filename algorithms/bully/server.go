@@ -1,10 +1,9 @@
-package server
+package bully
 
 import (
 	"time"
 	"log"
 	"github.com/alexandremr01/user-elections/client"
-	"github.com/alexandremr01/user-elections/algorithms"
 	"github.com/alexandremr01/user-elections/messages"
 )
 
@@ -12,10 +11,10 @@ type Server struct {
 	NodeID int 
 	LastHearbeat *time.Time
 	Client *client.Client
-	Elections *algorithms.Elections
+	Elections *BullyElections
 }
 
-func NewServer(nodeID int, client *client.Client, elections *algorithms.Elections) *Server {
+func NewServer(nodeID int, client *client.Client, elections *BullyElections) *Server {
 	return &Server{NodeID: nodeID, Client: client, Elections: elections}
 }
 
@@ -46,7 +45,7 @@ func (s *Server) CallForElection(args *messages.ElectionArgs, reply *int64) erro
 		messages.RespondElectionArgs{Sender: s.NodeID},
 	)
 	if !s.Elections.Happening{
-		s.Elections.Start()
+		s.Elections.StartElections()
 	}
     return nil
 }
