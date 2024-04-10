@@ -10,13 +10,12 @@ import (
 
 type Server struct {
 	NodeID int 
-	LastHearbeat *time.Time
 	Client *client.Client
 	Elections *Elections
 	state *state.State
 }
 
-type HearbeatArgs struct {
+type AppendEntriesArgs struct {
 	Term int
 	Sender int
 }
@@ -25,11 +24,12 @@ func NewServer(nodeID int, client *client.Client, elections *Elections, state *s
 	return &Server{NodeID: nodeID, Client: client, Elections: elections, state: state}
 }
 
-func (s *Server) SendHeartbeat(args *HearbeatArgs, reply *int64) error {
+func (s *Server) AppendEntries(args *AppendEntriesArgs, reply *int64) error {
 	message := ""
 	if args.Term >= s.Elections.CurrentTerm {
+		s.Elections.Interrupt()
 		now := time.Now()
-		s.LastHearbeat = &now
+		s.state.LastHearbeat = &now
 		message += fmt.Sprintf("Node %d: Received heartbeat from node %d", s.NodeID, args.Sender)
 	}
 	if args.Term > s.Elections.CurrentTerm {
@@ -37,20 +37,36 @@ func (s *Server) SendHeartbeat(args *HearbeatArgs, reply *int64) error {
 		s.state.CoordinatorID = args.Sender
 		message += fmt.Sprintf("Updated term to %d", args.Term)
 	}
+	if args.Term < s.Elections.CurrentTerm {
+		message = fmt.Sprintf("Rejecting AppendEntries from outdated leader %d of term %d", args.Sender, args.Term)
+	}
 	message += "\n"
 	log.Printf(message)
     return nil
 }
 
-// func (s *Server) RequestVote(args *messages.ElectionArgs, reply *int64) error {
-//     log.Printf("Node %d: Received call for elections from node %d\n", s.NodeID, args.Sender)
-// 	s.Client.Send(
-// 		args.Sender,
-// 		"Server.RespondElection", 
-// 		messages.RespondElectionArgs{Sender: s.NodeID},
-// 	)
-// 	if !s.Elections.Happening{
-// 		s.Elections.StartElections()
-// 	}
-//     return nil
-// }
+type RequestVoteArgs struct {
+	Sender int
+	Term int
+}
+type RequestVoteResponse struct {VoteGranted bool}
+func (s *Server) RequestVote(args *RequestVoteArgs, reply *RequestVoteResponse) error {
+	if args.Term > s.Elections.CurrentTerm {
+		s.Elections.CurrentTerm = args.Term
+		s.Elections.VotedFor = -1
+	}
+	willVote := (args.Term >= s.Elections.CurrentTerm) && (s.Elections.VotedFor == -1)
+    log.Printf("Node %d: Received vote request from node %d for term %d, voting %t\n", s.NodeID, args.Sender, args.Term, willVote)
+	if willVote {
+		s.Elections.VotedFor = args.Sender
+	}
+	// received signal from candidate: can reset timer
+	if args.Term >= s.Elections.CurrentTerm {
+		now := time.Now()
+		s.state.LastHearbeat = &now
+	}
+	*reply = RequestVoteResponse{
+		VoteGranted: willVote,
+	}
+    return nil
+}

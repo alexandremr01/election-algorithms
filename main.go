@@ -32,17 +32,10 @@ func main() {
 		log.Fatal("error parsing config: ", err)
 	}
     log.Printf("My ID: %d\n", config.NodeID)
-	
-	leader := -1
-	for _, id := range ids {
-		if id > leader {
-			leader = id
-		}
-	}
 
 	algorithmName := "raft"
 	connection := client.NewClient(config.NodeID)
-	state := state.NewState(leader)
+	state := state.NewState()
 
 	var algorithm Algorithm
 	var server any
@@ -66,11 +59,11 @@ func main() {
 				algorithm.SendHeartbeat()
 				time.Sleep(config.HeartbeatDuration)
 			} else {
+				time.Sleep(config.TimeoutDuration)
 				if (state.LastHearbeat == nil) || (time.Now().Sub(*state.LastHearbeat) > config.TimeoutDuration) {
 					log.Printf("Leader timed out")
 					algorithm.StartElections()					
 				}			
-				time.Sleep(config.TimeoutDuration)
 			}
 		}
     }()

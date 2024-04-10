@@ -9,6 +9,6 @@ type State struct {
 	LastHearbeat *time.Time
 }
 
-func NewState(leader int) *State {
-	return &State{CoordinatorID: leader, LastHearbeat: nil}
+func NewState() *State {
+	return &State{CoordinatorID: -1, LastHearbeat: nil}
 }

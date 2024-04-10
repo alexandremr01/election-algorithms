@@ -9,7 +9,6 @@ import (
 
 type Server struct {
 	NodeID int 
-	LastHearbeat *time.Time
 	Client *client.Client
 	Elections *BullyElections
 	state *state.State
@@ -28,10 +27,11 @@ func NewServer(nodeID int, client *client.Client, elections *BullyElections, sta
 func (s *Server) SendHeartbeat(args *HearbeatArgs, reply *int64) error {
     log.Printf("Node %d: Received heartbeat from node %d\n", s.NodeID, args.Sender)
 	now := time.Now()
-	s.LastHearbeat = &now
+	s.state.LastHearbeat = &now
     return nil
 }
 
+// TODO: do we need this or can we use the responde from the CallForElection RPC?
 func (s *Server) RespondElection(args *RespondElectionArgs, reply *int64) error {
     log.Printf("Node %d: Received OK from node %d\n", s.NodeID, args.Sender)
 	s.Elections.Answered = true
@@ -50,6 +50,7 @@ func (s *Server) CallForElection(args *ElectionArgs, reply *int64) error {
 		args.Sender,
 		"Server.RespondElection", 
 		RespondElectionArgs{Sender: s.NodeID},
+		nil,
 	)
 	if !s.Elections.Happening{
 		s.Elections.StartElections()

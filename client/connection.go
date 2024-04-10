@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"log"
 	"net/rpc"
 )
 
@@ -33,11 +34,11 @@ func (c *Client) Broadcast(ids []int, serviceMethod string, args any){
 		if id == c.nodeID {
 			continue
 		}
-		c.Send(id, serviceMethod, args)
+		c.Send(id, serviceMethod, args, nil)
 	}
 }
 
-func (c *Client) Send(id int, serviceMethod string, args any) {
+func (c *Client) Send(id int, serviceMethod string, args any, resp any) {
 	// tries to connect - not guaranteed
 	if c.clients[id] == nil {
 		hostname := fmt.Sprintf("p%d:8000", id)
@@ -45,6 +46,11 @@ func (c *Client) Send(id int, serviceMethod string, args any) {
 		c.clients[id] = client
 	}
 	if c.clients[id] != nil {
-		_ =  c.clients[id].Call(serviceMethod, args, nil)
+		err := c.clients[id].Call(serviceMethod, args, resp)
+		if err == rpc.ErrShutdown {
+			c.clients[id] = nil
+		} else if err != nil {
+			log.Print("error trying to talk to", id, err)
+		}
 	}
 }
