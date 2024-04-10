@@ -3,7 +3,6 @@ package bully
 import (
 	"log"
 	"github.com/alexandremr01/user-elections/client"
-	"github.com/alexandremr01/user-elections/messages"
 	"github.com/alexandremr01/user-elections/state"
 	"time"
 )
@@ -48,13 +47,13 @@ func (e *BullyElections) StartElections() {
 	e.Answered = false
 	e.Happening = true
 
-	e.connection.Broadcast(e.higherIds[:], "Server.CallForElection", messages.ElectionArgs{Sender: e.nodeID})
+	e.connection.Broadcast(e.higherIds[:], "Server.CallForElection", ElectionArgs{Sender: e.nodeID})
 	time.Sleep(e.electionDuration)
 	if e.Answered {
 		log.Printf("Node %d: Election finished with responses, going back to normal.", e.nodeID)
 	} else {
 		e.state.CoordinatorID = e.nodeID
-		e.connection.Broadcast(e.ids[:], "Server.NotifyNewCoordinator", messages.NotifyNewCoordinatorArgs{Sender: e.nodeID})
+		e.connection.Broadcast(e.ids[:], "Server.NotifyNewCoordinator", NotifyNewCoordinatorArgs{Sender: e.nodeID})
 		log.Printf("Node %d: Election finished without responses, becoming leader.", e.nodeID)
 	}
 
@@ -62,5 +61,5 @@ func (e *BullyElections) StartElections() {
 }
 
 func (e *BullyElections) SendHeartbeat() {
-	e.connection.Broadcast(e.ids, "Server.SendHeartbeat", messages.HearbeatArgs{Sender: e.nodeID})
+	e.connection.Broadcast(e.ids, "Server.SendHeartbeat", HearbeatArgs{Sender: e.nodeID})
 }
