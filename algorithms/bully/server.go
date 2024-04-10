@@ -5,6 +5,7 @@ import (
 	"log"
 	"github.com/alexandremr01/user-elections/client"
 	"github.com/alexandremr01/user-elections/messages"
+	"github.com/alexandremr01/user-elections/state"
 )
 
 type Server struct {
@@ -12,10 +13,11 @@ type Server struct {
 	LastHearbeat *time.Time
 	Client *client.Client
 	Elections *BullyElections
+	state *state.State
 }
 
-func NewServer(nodeID int, client *client.Client, elections *BullyElections) *Server {
-	return &Server{NodeID: nodeID, Client: client, Elections: elections}
+func NewServer(nodeID int, client *client.Client, elections *BullyElections, state *state.State) *Server {
+	return &Server{NodeID: nodeID, Client: client, Elections: elections, state: state}
 }
 
 func (s *Server) SendHeartbeat(args *messages.HearbeatArgs, reply *int64) error {
@@ -33,7 +35,7 @@ func (s *Server) RespondElection(args *messages.RespondElectionArgs, reply *int6
 
 func (s *Server) NotifyNewCoordinator(args *messages.NotifyNewCoordinatorArgs, reply *int64) error {
     log.Printf("Node %d: Received NewCoordinator from node %d\n", s.NodeID, args.Sender)
-	s.Elections.CoordinatorID = args.Sender
+	s.state.CoordinatorID = args.Sender
     return nil
 }
 

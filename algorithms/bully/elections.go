@@ -4,13 +4,14 @@ import (
 	"log"
 	"github.com/alexandremr01/user-elections/client"
 	"github.com/alexandremr01/user-elections/messages"
+	"github.com/alexandremr01/user-elections/state"
 	"time"
 )
  
 type BullyElections struct {
 	Happening bool
 	Answered bool
-	CoordinatorID int
+	state *state.State
 
 	connection *client.Client
 
@@ -20,7 +21,7 @@ type BullyElections struct {
 	ids []int
 }
 
-func NewBullyElections(ids []int, nodeID int, coordinatorID int, connection *client.Client, electionDuration time.Duration) *BullyElections {
+func NewBullyElections(ids []int, nodeID int, state *state.State, connection *client.Client, electionDuration time.Duration) *BullyElections {
 	var higherIds []int
 	for _, id := range ids {
 		if id > nodeID {
@@ -33,7 +34,7 @@ func NewBullyElections(ids []int, nodeID int, coordinatorID int, connection *cli
 		higherIds: higherIds,
 		ids: ids,
 		nodeID: nodeID,
-		CoordinatorID: coordinatorID,
+		state: state,
 		connection: connection,
 		electionDuration: electionDuration,
 	}
@@ -52,7 +53,7 @@ func (e *BullyElections) StartElections() {
 	if e.Answered {
 		log.Printf("Node %d: Election finished with responses, going back to normal.", e.nodeID)
 	} else {
-		e.CoordinatorID = e.nodeID
+		e.state.CoordinatorID = e.nodeID
 		e.connection.Broadcast(e.ids[:], "Server.NotifyNewCoordinator", messages.NotifyNewCoordinatorArgs{Sender: e.nodeID})
 		log.Printf("Node %d: Election finished without responses, becoming leader.", e.nodeID)
 	}
@@ -60,3 +61,6 @@ func (e *BullyElections) StartElections() {
 	e.Happening = false
 }
 
+func (e *BullyElections) SendHeartbeat() {
+	e.connection.Broadcast(e.ids, "Server.SendHeartbeat", messages.HearbeatArgs{Sender: e.nodeID})
+}
