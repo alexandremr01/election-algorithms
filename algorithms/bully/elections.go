@@ -18,16 +18,17 @@ type BullyElections struct {
 	electionDuration time.Duration
 	higherIds []int
 	ids []int
+	server *Server
 }
 
-func NewBullyElections(ids []int, nodeID int, state *state.State, connection *client.Client, electionDuration time.Duration) *BullyElections {
+func NewElections(ids []int, nodeID int, state *state.State, connection *client.Client, electionDuration time.Duration) *BullyElections {
 	var higherIds []int
 	for _, id := range ids {
 		if id > nodeID {
 			higherIds = append(higherIds, id)
 		}
 	}
-	return &BullyElections{
+	alg := &BullyElections{
 		Happening: false,
 		Answered: false,
 		higherIds: higherIds,
@@ -36,7 +37,11 @@ func NewBullyElections(ids []int, nodeID int, state *state.State, connection *cl
 		state: state,
 		connection: connection,
 		electionDuration: electionDuration,
+		server: nil,
 	}
+	server := NewServer(nodeID, connection, alg, state)
+	alg.server = server
+	return alg
 }
 
 func (e *BullyElections) InitializeNode() {
@@ -62,4 +67,8 @@ func (e *BullyElections) StartElections() {
 
 func (e *BullyElections) SendHeartbeat() {
 	e.connection.Broadcast(e.ids, "Server.SendHeartbeat", HearbeatArgs{Sender: e.nodeID})
+}
+
+func (e *BullyElections) GetServer() any {
+	return e.server
 }

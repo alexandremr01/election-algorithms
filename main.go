@@ -5,6 +5,7 @@ import (
 	"net/rpc"
 	"net/http"
 	"net"
+	"errors"
 	"time"
 
 	"github.com/alexandremr01/user-elections/config"
@@ -18,14 +19,12 @@ type Algorithm interface{
 	InitializeNode()
 	StartElections()
 	SendHeartbeat()
-}
-
-type Server interface {
-	GetLastHearbeat() *time.Time
+	GetServer() any
 }
 
 func main() {
 	ids := []int{1, 2, 3, 4}
+	algorithmName := "raft"
 
 	config, err := config.GetConfig()
 	if err != nil {
@@ -33,45 +32,51 @@ func main() {
 	}
     log.Printf("My ID: %d\n", config.NodeID)
 
-	algorithmName := "raft"
 	connection := client.NewClient(config.NodeID)
 	state := state.NewState()
 
-	var algorithm Algorithm
-	var server any
-	if algorithmName == "bully"{
-		bullyAlg := bully.NewBullyElections(ids, config.NodeID, state, connection, config.ElectionDuration)
-		server = bully.NewServer(config.NodeID, connection, bullyAlg, state)
-		algorithm = bullyAlg
-	} else if algorithmName == "raft" {
-		raftAlg := raft.NewElections(ids, config.NodeID, state, connection, config.ElectionDuration)
-		server = raft.NewServer(config.NodeID, connection, raftAlg, state)
-		algorithm = raftAlg
-	} else {
-		log.Fatalf("Unrecognized algorithm %s", algorithmName)
+	algorithm, err := getAlgorithm(ids, algorithmName, state, connection, config)
+	if err != nil {
+		log.Fatalf("%s", err)
 	}
 
-	go func() {
-		connection.Init(ids[:])
-		algorithm.InitializeNode()
-		for {
-			if (config.NodeID == state.CoordinatorID) {
-				algorithm.SendHeartbeat()
-				time.Sleep(config.HeartbeatDuration)
-			} else {
-				time.Sleep(config.TimeoutDuration)
-				if (state.LastHearbeat == nil) || (time.Now().Sub(*state.LastHearbeat) > config.TimeoutDuration) {
-					log.Printf("Leader timed out")
-					algorithm.StartElections()					
-				}			
-			}
+	// run in a second thread
+	go mainLoop(algorithm, state, config)
+
+	server := algorithm.GetServer()
+	registerAndServe(server, config.Port)
+}
+
+func getAlgorithm(ids []int, algorithmName string, state *state.State, connection *client.Client, config *config.Config) (Algorithm, error) {
+	if algorithmName == "bully"{
+		return bully.NewElections(ids, config.NodeID, state, connection, config.ElectionDuration), nil
+	} else if algorithmName == "raft" {
+		return raft.NewElections(ids, config.NodeID, state, connection, config.ElectionDuration), nil
+	} 
+	return nil, errors.New("unrecognized algorithm")
+}
+
+func mainLoop(algorithm Algorithm, state *state.State, config *config.Config) {
+	algorithm.InitializeNode()
+	for {
+		if (config.NodeID == state.CoordinatorID) {
+			algorithm.SendHeartbeat()
+			time.Sleep(config.HeartbeatDuration)
+		} else {
+			time.Sleep(config.TimeoutDuration)
+			if (state.LastHearbeat == nil) || (time.Now().Sub(*state.LastHearbeat) > config.TimeoutDuration) {
+				log.Printf("Leader timed out")
+				algorithm.StartElections()					
+			}			
 		}
-    }()
-	
+	}
+}
+
+func registerAndServe(server any, port string) {
 	rpc.Register(server)
 	rpc.HandleHTTP()
 
-	l, e := net.Listen("tcp", ":"+config.Port)
+	l, e := net.Listen("tcp", ":"+port)
 	if e != nil {
 		log.Fatal("listen error:", e)
 	}

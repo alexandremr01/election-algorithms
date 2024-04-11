@@ -19,10 +19,11 @@ type Elections struct {
 	electionDuration time.Duration
 	ids []int
 	state *state.State
+	server *Server
 }
 
 func NewElections(ids []int, nodeID int, state *state.State, connection *client.Client, electionDuration time.Duration) *Elections {
-	return &Elections{
+	alg := &Elections{
 		CurrentTerm: 0,
 		VotedFor: -1,
 		ids: ids,
@@ -30,7 +31,11 @@ func NewElections(ids []int, nodeID int, state *state.State, connection *client.
 		state: state,
 		connection: connection,
 		electionDuration: electionDuration,
+		server: nil,
 	}
+	server := NewServer(nodeID, connection, alg, state)
+	alg.server = server
+	return alg
 }
 
 // RAFT has no action on startup: it will follow the current leader
@@ -88,4 +93,8 @@ func (e *Elections) SendHeartbeat() {
 func (e *Elections) Interrupt() {
 	e.Happening = false	
 	e.VotedFor = -1
+}
+
+func (e *Elections) GetServer() any {
+	return e.server
 }
