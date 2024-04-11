@@ -4,6 +4,8 @@ import (
 	"log"
 	"github.com/alexandremr01/user-elections/client"
 	"github.com/alexandremr01/user-elections/state"
+	"github.com/alexandremr01/user-elections/config"
+	"github.com/alexandremr01/user-elections/algorithms/types"
 	"time"
 )
  
@@ -22,18 +24,18 @@ type Elections struct {
 	server *Server
 }
 
-func NewElections(ids []int, nodeID int, state *state.State, connection *client.Client, electionDuration time.Duration) *Elections {
+func NewElections(conf *config.Config, state *state.State, connection *client.Client) types.Algorithm {
 	alg := &Elections{
 		CurrentTerm: 0,
 		VotedFor: -1,
-		ids: ids,
-		nodeID: nodeID,
+		ids: conf.IDs,
+		nodeID: conf.NodeID,
 		state: state,
 		connection: connection,
-		electionDuration: electionDuration,
+		electionDuration: conf.ElectionDuration,
 		server: nil,
 	}
-	server := NewServer(nodeID, connection, alg, state)
+	server := NewServer(conf.NodeID, connection, alg, state)
 	alg.server = server
 	return alg
 }

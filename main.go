@@ -5,32 +5,22 @@ import (
 	"net/rpc"
 	"net/http"
 	"net"
-	"errors"
+	"fmt"
 	"time"
 	"flag"
 
 	"github.com/alexandremr01/user-elections/config"
 	"github.com/alexandremr01/user-elections/client"
-	"github.com/alexandremr01/user-elections/algorithms/bully"
-	"github.com/alexandremr01/user-elections/algorithms/raft"
+	"github.com/alexandremr01/user-elections/algorithms"
+	"github.com/alexandremr01/user-elections/algorithms/types"
 	"github.com/alexandremr01/user-elections/state"
 )
 
-type Algorithm interface{
-	InitializeNode()
-	StartElections()
-	SendHeartbeat()
-	GetServer() any
-}
-
 func main() {
-	// get command line arguments
-	algorithmName := flag.String("algorithm", "raft" , "Algorithm name (raft or bully)")
-	configFile := flag.String("config", "config.json" , "Configuration file")
-	flag.Parse()
+	cliArguments := parseCLI()
 
 	// get config from json and env vars
-	config, err := config.GetConfig(*configFile)
+	config, err := config.GetConfig(cliArguments.configFile)
 	if err != nil {
 		log.Fatal("error parsing config: ", err)
 	}
@@ -38,7 +28,7 @@ func main() {
 	// build necessary dependencies
 	connection := client.NewClient(config.NodeID, config.Addresses)
 	state := state.NewState()
-	algorithm, err := getAlgorithm(config.IDs, *algorithmName, state, connection, config)
+	algorithm, err := algorithms.GetAlgorithm(cliArguments.algorithmName, config, state, connection)
 	if err != nil {
 		log.Fatalf("%s", err)
 	}
@@ -51,16 +41,7 @@ func main() {
 	registerAndServe(server, config.Port)
 }
 
-func getAlgorithm(ids []int, algorithmName string, state *state.State, connection *client.Client, config *config.Config) (Algorithm, error) {
-	if algorithmName == "bully"{
-		return bully.NewElections(ids, config.NodeID, state, connection, config.ElectionDuration), nil
-	} else if algorithmName == "raft" {
-		return raft.NewElections(ids, config.NodeID, state, connection, config.ElectionDuration), nil
-	} 
-	return nil, errors.New("unrecognized algorithm")
-}
-
-func mainLoop(algorithm Algorithm, state *state.State, config *config.Config) {
+func mainLoop(algorithm types.Algorithm, state *state.State, config *config.Config) {
     log.Printf("My ID: %d\n", config.NodeID)
 	algorithm.InitializeNode()
 	for {
@@ -75,6 +56,28 @@ func mainLoop(algorithm Algorithm, state *state.State, config *config.Config) {
 			}			
 		}
 	}
+}
+
+
+type cliArguments struct {
+	configFile string
+	algorithmName string
+}
+
+func parseCLI() *cliArguments{
+	// format algorithms list
+	algorithmList := algorithms.GetAlgorithmsList()
+	algorithmListStr := ""
+	for _, alg := range algorithmList {
+		algorithmListStr += alg + ","
+	}
+	algorithmListStr = algorithmListStr[:len(algorithmListStr)-1]
+	algorithmHelp := fmt.Sprintf("Algorithm name (%s)", algorithmListStr)
+	// get command line arguments
+	algorithmName := flag.String("algorithm", "raft" , algorithmHelp)
+	configFile := flag.String("config", "config.json" , "Configuration file")
+	flag.Parse()
+	return &cliArguments{configFile: *configFile, algorithmName: *algorithmName}
 }
 
 func registerAndServe(server any, port string) {

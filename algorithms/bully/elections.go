@@ -4,6 +4,8 @@ import (
 	"log"
 	"github.com/alexandremr01/user-elections/client"
 	"github.com/alexandremr01/user-elections/state"
+	"github.com/alexandremr01/user-elections/config"
+	"github.com/alexandremr01/user-elections/algorithms/types"
 	"time"
 )
  
@@ -21,10 +23,11 @@ type BullyElections struct {
 	server *Server
 }
 
-func NewElections(ids []int, nodeID int, state *state.State, connection *client.Client, electionDuration time.Duration) *BullyElections {
+func NewElections(conf *config.Config, state *state.State, connection *client.Client) types.Algorithm {
 	var higherIds []int
+	ids := conf.IDs
 	for _, id := range ids {
-		if id > nodeID {
+		if id > conf.NodeID {
 			higherIds = append(higherIds, id)
 		}
 	}
@@ -33,13 +36,13 @@ func NewElections(ids []int, nodeID int, state *state.State, connection *client.
 		Answered: false,
 		higherIds: higherIds,
 		ids: ids,
-		nodeID: nodeID,
+		nodeID: conf.NodeID,
 		state: state,
 		connection: connection,
-		electionDuration: electionDuration,
+		electionDuration: conf.ElectionDuration,
 		server: nil,
 	}
-	server := NewServer(nodeID, connection, alg, state)
+	server := NewServer(conf.NodeID, connection, alg, state)
 	alg.server = server
 	return alg
 }
