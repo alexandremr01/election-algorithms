@@ -1,22 +1,23 @@
 package raft
 
 import (
-	"time"
 	"fmt"
 	"log"
+	"time"
+
 	"github.com/alexandremr01/user-elections/client"
 	"github.com/alexandremr01/user-elections/state"
 )
 
 type Server struct {
-	NodeID int 
-	Client *client.Client
+	NodeID    int
+	Client    *client.Client
 	Elections *Elections
-	state *state.State
+	state     *state.State
 }
 
 type AppendEntriesArgs struct {
-	Term int
+	Term   int
 	Sender int
 }
 
@@ -24,7 +25,7 @@ func NewServer(nodeID int, client *client.Client, elections *Elections, state *s
 	return &Server{NodeID: nodeID, Client: client, Elections: elections, state: state}
 }
 
-func (s *Server) AppendEntries(args *AppendEntriesArgs, reply *int64) error {
+func (s *Server) AppendEntries(args *AppendEntriesArgs, _ *int64) error {
 	message := ""
 	if args.Term >= s.Elections.CurrentTerm {
 		s.Elections.Interrupt()
@@ -38,25 +39,32 @@ func (s *Server) AppendEntries(args *AppendEntriesArgs, reply *int64) error {
 		message += fmt.Sprintf("Updated term to %d", args.Term)
 	}
 	if args.Term < s.Elections.CurrentTerm {
-		message = fmt.Sprintf("Rejecting AppendEntries from outdated leader %d of term %d", args.Sender, args.Term)
+		message = fmt.Sprintf(
+			"Rejecting AppendEntries from outdated leader %d of term %d",
+			args.Sender, args.Term,
+		)
 	}
 	message += "\n"
-	log.Printf(message)
-    return nil
+	log.Print(message)
+	return nil
 }
 
 type RequestVoteArgs struct {
 	Sender int
-	Term int
+	Term   int
 }
-type RequestVoteResponse struct {VoteGranted bool}
+type RequestVoteResponse struct{ VoteGranted bool }
+
 func (s *Server) RequestVote(args *RequestVoteArgs, reply *RequestVoteResponse) error {
 	if args.Term > s.Elections.CurrentTerm {
 		s.Elections.CurrentTerm = args.Term
 		s.Elections.VotedFor = -1
 	}
 	willVote := (args.Term >= s.Elections.CurrentTerm) && (s.Elections.VotedFor == -1)
-    log.Printf("Node %d: Received vote request from node %d for term %d, voting %t\n", s.NodeID, args.Sender, args.Term, willVote)
+	log.Printf(
+		"Node %d: Received vote request from node %d for term %d, voting %t\n",
+		s.NodeID, args.Sender, args.Term, willVote,
+	)
 	if willVote {
 		s.Elections.VotedFor = args.Sender
 	}
@@ -68,5 +76,5 @@ func (s *Server) RequestVote(args *RequestVoteArgs, reply *RequestVoteResponse) 
 	*reply = RequestVoteResponse{
 		VoteGranted: willVote,
 	}
-    return nil
+	return nil
 }

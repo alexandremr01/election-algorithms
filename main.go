@@ -1,18 +1,18 @@
 package main
 
 import (
-	"log"
-	"net/rpc"
-	"net/http"
-	"net"
-	"fmt"
-	"time"
 	"flag"
+	"fmt"
+	"log"
+	"net"
+	"net/http"
+	"net/rpc"
+	"time"
 
-	"github.com/alexandremr01/user-elections/config"
-	"github.com/alexandremr01/user-elections/client"
 	"github.com/alexandremr01/user-elections/algorithms"
 	"github.com/alexandremr01/user-elections/algorithms/types"
+	"github.com/alexandremr01/user-elections/client"
+	"github.com/alexandremr01/user-elections/config"
 	"github.com/alexandremr01/user-elections/state"
 )
 
@@ -42,29 +42,28 @@ func main() {
 }
 
 func mainLoop(algorithm types.Algorithm, state *state.State, config *config.Config) {
-    log.Printf("My ID: %d\n", config.NodeID)
+	log.Printf("My ID: %d\n", config.NodeID)
 	algorithm.InitializeNode()
 	for {
-		if (config.NodeID == state.CoordinatorID) {
+		if config.NodeID == state.CoordinatorID {
 			algorithm.SendHeartbeat()
 			time.Sleep(config.HeartbeatDuration)
 		} else {
 			time.Sleep(config.TimeoutDuration)
 			if (state.LastHearbeat == nil) || (time.Now().Sub(*state.LastHearbeat) > config.TimeoutDuration) {
 				log.Printf("Leader timed out")
-				algorithm.StartElections()					
-			}			
+				algorithm.StartElections()
+			}
 		}
 	}
 }
 
-
 type cliArguments struct {
-	configFile string
+	configFile    string
 	algorithmName string
 }
 
-func parseCLI() *cliArguments{
+func parseCLI() *cliArguments {
 	// format algorithms list
 	algorithmList := algorithms.GetAlgorithmsList()
 	algorithmListStr := ""
@@ -74,8 +73,8 @@ func parseCLI() *cliArguments{
 	algorithmListStr = algorithmListStr[:len(algorithmListStr)-1]
 	algorithmHelp := fmt.Sprintf("Algorithm name (%s)", algorithmListStr)
 	// get command line arguments
-	algorithmName := flag.String("algorithm", "raft" , algorithmHelp)
-	configFile := flag.String("config", "config.json" , "Configuration file")
+	algorithmName := flag.String("algorithm", "raft", algorithmHelp)
+	configFile := flag.String("config", "config.json", "Configuration file")
 	flag.Parse()
 	return &cliArguments{configFile: *configFile, algorithmName: *algorithmName}
 }

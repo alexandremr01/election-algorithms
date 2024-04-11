@@ -1,6 +1,6 @@
 package types
 
-type Algorithm interface{
+type Algorithm interface {
 	InitializeNode()
 	StartElections()
 	SendHeartbeat()

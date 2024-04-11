@@ -1,44 +1,47 @@
 package config
 
 import (
-	"fmt"
-	"os"
-	"errors"
-	"io/ioutil"
 	"encoding/json"
-	"time"
+	"errors"
+	"fmt"
+	"io"
+	"os"
 	"strconv"
+	"time"
 )
 
 type Config struct {
-	TimeoutDuration time.Duration
-	ElectionDuration time.Duration
+	TimeoutDuration   time.Duration
+	ElectionDuration  time.Duration
 	HeartbeatDuration time.Duration
-	Port string
-	NodeID int
-	Addresses map[int]string
-	IDs []int
+	Port              string
+	NodeID            int
+	Addresses         map[int]string
+	IDs               []int
 }
 
-type JsonConfig struct {
+type JSONConfig struct {
 	Addresses map[string]string `json:"addresses"`
 }
 
-func parseJsonConfig(fileName string) (map[int]string, error) {
+func parseJSONConfig(fileName string) (map[int]string, error) {
 	jsonFile, err := os.Open(fileName)
-    if err != nil {
-        return nil, err
-    }
-    defer jsonFile.Close()
-
-    byteValue, err := ioutil.ReadAll(jsonFile)
 	if err != nil {
-        return nil, err
-    }
+		return nil, err
+	}
+	defer jsonFile.Close()
 
-    var result JsonConfig
-    json.Unmarshal(byteValue, &result)
-	
+	byteValue, err := io.ReadAll(jsonFile)
+	if err != nil {
+		return nil, err
+	}
+
+	var result JSONConfig
+	err = json.Unmarshal(byteValue, &result)
+	if err != nil {
+		return nil, err
+	}
+
 	addresses := make(map[int]string)
 	for key, value := range result.Addresses {
 		intKey, err := strconv.Atoi(key)
@@ -52,45 +55,45 @@ func parseJsonConfig(fileName string) (map[int]string, error) {
 }
 
 func GetConfig(jsonConfigName string) (*Config, error) {
-	addresses, err := parseJsonConfig(jsonConfigName)
+	addresses, err := parseJSONConfig(jsonConfigName)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing json config: %s", err)
+		return nil, fmt.Errorf("error parsing json config: %w", err)
 	}
 	ids := []int{}
 	for id := range addresses {
-		ids = append(ids,id)
+		ids = append(ids, id)
 	}
 
-	nodeID, err := strconv.Atoi(os.Getenv("NODE_ID")) 
+	nodeID, err := strconv.Atoi(os.Getenv("NODE_ID"))
 	if err != nil {
-		return nil, fmt.Errorf("error parsing node id:", err)
+		return nil, fmt.Errorf("error parsing node id: %w", err)
 	}
 	timeout, err := strconv.Atoi(os.Getenv("NODE_TIMEOUT"))
 	if err != nil {
-		return nil, fmt.Errorf("error parsing timeout:", err)
+		return nil, fmt.Errorf("error parsing timeout: %w", err)
 	}
-	timeoutDuration := time.Duration(timeout)*time.Millisecond
+	timeoutDuration := time.Duration(timeout) * time.Millisecond
 
 	electionTimeout, err := strconv.Atoi(os.Getenv("ELECTION_TIMEOUT"))
 	if err != nil {
-		return nil, fmt.Errorf("error parsing election timeout:", err)
+		return nil, fmt.Errorf("error parsing election timeout: %w", err)
 	}
-	electionDuration := time.Duration(electionTimeout)*time.Millisecond
+	electionDuration := time.Duration(electionTimeout) * time.Millisecond
 
 	heartbeatTime, err := strconv.Atoi(os.Getenv("HEARTBEAT_TIME"))
 	if err != nil {
-		return nil, fmt.Errorf("error parsing heartbeat time:", err)
+		return nil, fmt.Errorf("error parsing heartbeat time: %w", err)
 	}
-	heartbeatTimeDuration := time.Duration(heartbeatTime)*time.Second
+	heartbeatTimeDuration := time.Duration(heartbeatTime) * time.Second
 	port := os.Getenv("PORT")
 
 	return &Config{
-		Port: port,
-		NodeID: nodeID, 
+		Port:              port,
+		NodeID:            nodeID,
 		HeartbeatDuration: heartbeatTimeDuration,
-		TimeoutDuration: timeoutDuration,
-		ElectionDuration: electionDuration,
-		Addresses: addresses,
-		IDs: ids,
+		TimeoutDuration:   timeoutDuration,
+		ElectionDuration:  electionDuration,
+		Addresses:         addresses,
+		IDs:               ids,
 	}, nil
 }

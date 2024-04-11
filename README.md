@@ -2,7 +2,13 @@
 
 ## Development
 
-For development, you can open one of the process in interactive mode through `docker compose run -it p1 bash` and then `go run main.go --algorithm raft`.
+For development, you can open one of the process in interactive mode through `docker compose run -it p1 bash` and then `go run main.go --algorithm raft`. After any changes, we do 
+
+```
+go fmt ./...
+goimports -w -l .
+golangci-lint run
+```
 
 ## Run in Docker
 

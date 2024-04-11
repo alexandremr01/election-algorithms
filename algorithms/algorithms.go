@@ -1,19 +1,20 @@
-package algorithms 
+package algorithms
 
 import (
+	"errors"
+
 	"github.com/alexandremr01/user-elections/algorithms/bully"
 	"github.com/alexandremr01/user-elections/algorithms/raft"
 	"github.com/alexandremr01/user-elections/algorithms/types"
+	"github.com/alexandremr01/user-elections/client"
 	"github.com/alexandremr01/user-elections/config"
 	"github.com/alexandremr01/user-elections/state"
-	"github.com/alexandremr01/user-elections/client"
-	"errors"
 )
 
 type AlgorithmBuilder func(*config.Config, *state.State, *client.Client) types.Algorithm
 
-var algorithmBuilders = map[string]AlgorithmBuilder {
-	"raft": raft.NewElections,
+var algorithmBuilders = map[string]AlgorithmBuilder{
+	"raft":  raft.NewElections,
 	"bully": bully.NewElections,
 }
 
@@ -25,7 +26,10 @@ func GetAlgorithmsList() []string {
 	return algorithms
 }
 
-func GetAlgorithm(algorithmName string, conf *config.Config, state *state.State, client *client.Client) (types.Algorithm, error) {
+func GetAlgorithm(algorithmName string,
+	conf *config.Config,
+	state *state.State,
+	client *client.Client) (types.Algorithm, error) {
 	builder, ok := algorithmBuilders[algorithmName]
 	if !ok {
 		return nil, errors.New("algorithm not registered")

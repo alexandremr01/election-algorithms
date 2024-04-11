@@ -6,7 +6,7 @@ import (
 
 type State struct {
 	CoordinatorID int
-	LastHearbeat *time.Time
+	LastHearbeat  *time.Time
 }
 
 func NewState() *State {
