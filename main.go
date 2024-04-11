@@ -7,6 +7,7 @@ import (
 	"net"
 	"errors"
 	"time"
+	"flag"
 
 	"github.com/alexandremr01/user-elections/config"
 	"github.com/alexandremr01/user-elections/client"
@@ -24,7 +25,9 @@ type Algorithm interface{
 
 func main() {
 	ids := []int{1, 2, 3, 4}
-	algorithmName := "raft"
+
+	algorithmName := flag.String("algorithm", "raft" , "Algorithm name (raft or bully)")
+	flag.Parse()
 
 	config, err := config.GetConfig()
 	if err != nil {
@@ -35,7 +38,7 @@ func main() {
 	connection := client.NewClient(config.NodeID)
 	state := state.NewState()
 
-	algorithm, err := getAlgorithm(ids, algorithmName, state, connection, config)
+	algorithm, err := getAlgorithm(ids, *algorithmName, state, connection, config)
 	if err != nil {
 		log.Fatalf("%s", err)
 	}
