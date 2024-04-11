@@ -12,7 +12,7 @@ x-common:
     - elections
   volumes:
     - .:/app
-  command: go run /app/main.go --algorithm raft
+  command: go run /app/main.go --algorithm raft --config docker_config.json
   environment:
     &common-env
     PORT: 8000

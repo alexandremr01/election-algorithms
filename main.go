@@ -24,21 +24,21 @@ type Algorithm interface{
 }
 
 func main() {
-	ids := []int{1, 2, 3, 4}
-
+	// get command line arguments
 	algorithmName := flag.String("algorithm", "raft" , "Algorithm name (raft or bully)")
+	configFile := flag.String("config", "config.json" , "Configuration file")
 	flag.Parse()
 
-	config, err := config.GetConfig()
+	// get config from json and env vars
+	config, err := config.GetConfig(*configFile)
 	if err != nil {
 		log.Fatal("error parsing config: ", err)
 	}
-    log.Printf("My ID: %d\n", config.NodeID)
 
-	connection := client.NewClient(config.NodeID)
+	// build necessary dependencies
+	connection := client.NewClient(config.NodeID, config.Addresses)
 	state := state.NewState()
-
-	algorithm, err := getAlgorithm(ids, *algorithmName, state, connection, config)
+	algorithm, err := getAlgorithm(config.IDs, *algorithmName, state, connection, config)
 	if err != nil {
 		log.Fatalf("%s", err)
 	}
@@ -46,6 +46,7 @@ func main() {
 	// run in a second thread
 	go mainLoop(algorithm, state, config)
 
+	// listen to RPC requests
 	server := algorithm.GetServer()
 	registerAndServe(server, config.Port)
 }
@@ -60,6 +61,7 @@ func getAlgorithm(ids []int, algorithmName string, state *state.State, connectio
 }
 
 func mainLoop(algorithm Algorithm, state *state.State, config *config.Config) {
+    log.Printf("My ID: %d\n", config.NodeID)
 	algorithm.InitializeNode()
 	for {
 		if (config.NodeID == state.CoordinatorID) {

@@ -52,13 +52,13 @@ func (e *BullyElections) StartElections() {
 	e.Answered = false
 	e.Happening = true
 
-	e.connection.Broadcast(e.higherIds[:], "Server.CallForElection", ElectionArgs{Sender: e.nodeID})
+	e.connection.Broadcast(e.higherIds, "Server.CallForElection", ElectionArgs{Sender: e.nodeID})
 	time.Sleep(e.electionDuration)
 	if e.Answered {
 		log.Printf("Node %d: Election finished with responses, going back to normal.", e.nodeID)
 	} else {
 		e.state.CoordinatorID = e.nodeID
-		e.connection.Broadcast(e.ids[:], "Server.NotifyNewCoordinator", NotifyNewCoordinatorArgs{Sender: e.nodeID})
+		e.connection.Broadcast(e.ids, "Server.NotifyNewCoordinator", NotifyNewCoordinatorArgs{Sender: e.nodeID})
 		log.Printf("Node %d: Election finished without responses, becoming leader.", e.nodeID)
 	}
 

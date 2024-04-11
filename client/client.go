@@ -1,20 +1,21 @@
 package client
 
 import (
-	"fmt"
 	"log"
 	"net/rpc"
 )
 
 type Client struct {
 	clients map[int]*rpc.Client
+	addresses map[int]string
 	nodeID int
 }
 
-func NewClient(nodeID int) *Client{
+func NewClient(nodeID int, addresses map[int]string) *Client{
 	return &Client{
 		nodeID: nodeID,
 		clients: make(map[int]*rpc.Client),
+		addresses: addresses,
 	}
 }
 
@@ -30,8 +31,10 @@ func (c *Client) Broadcast(ids []int, serviceMethod string, args any){
 func (c *Client) Send(id int, serviceMethod string, args any, resp any) {
 	// tries to connect - not guaranteed
 	if c.clients[id] == nil {
-		hostname := fmt.Sprintf("p%d:8000", id)
-		client, _ := rpc.DialHTTP("tcp", hostname)
+		client, err := rpc.DialHTTP("tcp", c.addresses[id])
+		if err == nil {
+			log.Printf("Connection established with node %d at address %s", id, c.addresses[id])
+		}
 		c.clients[id] = client
 	}
 	if c.clients[id] != nil {
