@@ -8,17 +8,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+	"github.com/alexandremr01/user-elections/types"
 )
-
-type Config struct {
-	TimeoutDuration   time.Duration
-	ElectionDuration  time.Duration
-	HeartbeatDuration time.Duration
-	Port              string
-	NodeID            int
-	Addresses         map[int]string
-	IDs               []int
-}
 
 type JSONConfig struct {
 	Addresses map[string]string `json:"addresses"`
@@ -54,8 +45,10 @@ func parseJSONConfig(fileName string) (map[int]string, error) {
 	return addresses, nil
 }
 
-func GetConfig(jsonConfigName string) (*Config, error) {
-	addresses, err := parseJSONConfig(jsonConfigName)
+func GetConfig() (*types.Config, error) {
+	cliArguments := parseCLI()
+
+	addresses, err := parseJSONConfig(cliArguments.configFile)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing json config: %w", err)
 	}
@@ -64,10 +57,6 @@ func GetConfig(jsonConfigName string) (*Config, error) {
 		ids = append(ids, id)
 	}
 
-	nodeID, err := strconv.Atoi(os.Getenv("NODE_ID"))
-	if err != nil {
-		return nil, fmt.Errorf("error parsing node id: %w", err)
-	}
 	timeout, err := strconv.Atoi(os.Getenv("NODE_TIMEOUT"))
 	if err != nil {
 		return nil, fmt.Errorf("error parsing timeout: %w", err)
@@ -85,15 +74,15 @@ func GetConfig(jsonConfigName string) (*Config, error) {
 		return nil, fmt.Errorf("error parsing heartbeat time: %w", err)
 	}
 	heartbeatTimeDuration := time.Duration(heartbeatTime) * time.Second
-	port := os.Getenv("PORT")
 
-	return &Config{
-		Port:              port,
-		NodeID:            nodeID,
+	return &types.Config{
 		HeartbeatDuration: heartbeatTimeDuration,
 		TimeoutDuration:   timeoutDuration,
 		ElectionDuration:  electionDuration,
 		Addresses:         addresses,
 		IDs:               ids,
+		Port:              cliArguments.port,
+		NodeID: cliArguments.id,
+		AlgorithmName: cliArguments.algorithmName,
 	}, nil
 }

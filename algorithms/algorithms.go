@@ -5,13 +5,12 @@ import (
 
 	"github.com/alexandremr01/user-elections/algorithms/bully"
 	"github.com/alexandremr01/user-elections/algorithms/raft"
-	"github.com/alexandremr01/user-elections/algorithms/types"
+	"github.com/alexandremr01/user-elections/types"
 	"github.com/alexandremr01/user-elections/client"
-	"github.com/alexandremr01/user-elections/config"
 	"github.com/alexandremr01/user-elections/state"
 )
 
-type AlgorithmBuilder func(*config.Config, *state.State, *client.Client) types.Algorithm
+type AlgorithmBuilder func(*types.Config, *state.State, *client.Client) types.Algorithm
 
 var algorithmBuilders = map[string]AlgorithmBuilder{
 	"raft":  raft.NewElections,
@@ -27,7 +26,7 @@ func GetAlgorithmsList() []string {
 }
 
 func GetAlgorithm(algorithmName string,
-	conf *config.Config,
+	conf *types.Config,
 	state *state.State,
 	client *client.Client) (types.Algorithm, error) {
 	builder, ok := algorithmBuilders[algorithmName]

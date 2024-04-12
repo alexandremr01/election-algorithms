@@ -8,27 +8,26 @@ import (
 	"net/http"
 	"net/rpc"
 	"time"
+	"os"
 
 	"github.com/alexandremr01/user-elections/algorithms"
-	"github.com/alexandremr01/user-elections/algorithms/types"
+	"github.com/alexandremr01/user-elections/types"
 	"github.com/alexandremr01/user-elections/client"
 	"github.com/alexandremr01/user-elections/config"
 	"github.com/alexandremr01/user-elections/state"
 )
 
 func main() {
-	cliArguments := parseCLI()
-
-	// get config from json and env vars
-	config, err := config.GetConfig(cliArguments.configFile)
+	// get config from CLI, json and env vars
+	config, err := config.GetConfig()
 	if err != nil {
 		log.Fatal("error parsing config: ", err)
 	}
-
+	
 	// build necessary dependencies
 	connection := client.NewClient(config.NodeID, config.Addresses)
 	state := state.NewState()
-	algorithm, err := algorithms.GetAlgorithm(cliArguments.algorithmName, config, state, connection)
+	algorithm, err := algorithms.GetAlgorithm(config.AlgorithmName, config, state, connection)
 	if err != nil {
 		log.Fatalf("%s", err)
 	}
@@ -41,8 +40,8 @@ func main() {
 	registerAndServe(server, config.Port)
 }
 
-func mainLoop(algorithm types.Algorithm, state *state.State, config *config.Config) {
-	log.Printf("My ID: %d\n", config.NodeID)
+func mainLoop(algorithm types.Algorithm, state *state.State, config *types.Config) {
+	log.Printf("My ID: %d, My PID: %d\n", config.NodeID, os.Getpid())
 	algorithm.InitializeNode()
 	for {
 		if config.NodeID == state.CoordinatorID {
@@ -61,6 +60,8 @@ func mainLoop(algorithm types.Algorithm, state *state.State, config *config.Conf
 type cliArguments struct {
 	configFile    string
 	algorithmName string
+	id int
+	port string
 }
 
 func parseCLI() *cliArguments {
@@ -75,8 +76,15 @@ func parseCLI() *cliArguments {
 	// get command line arguments
 	algorithmName := flag.String("algorithm", "raft", algorithmHelp)
 	configFile := flag.String("config", "config.json", "Configuration file")
+	port := flag.String("port", "8000", "Port to connect")
+	id := flag.Int("id", 1, "Node ID")
 	flag.Parse()
-	return &cliArguments{configFile: *configFile, algorithmName: *algorithmName}
+	return &cliArguments{
+		configFile: *configFile, 
+		algorithmName: *algorithmName,
+		port: *port,
+		id: *id,
+	}
 }
 
 func registerAndServe(server any, port string) {

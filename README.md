@@ -10,16 +10,19 @@ goimports -w -l .
 golangci-lint run
 ```
 
-## Run in Docker
+## Run
 
-Run with `docker compose up`. 
+It can wither be run as
+
+- One node per docker container, using `docker compose up`;
+- One node per process, using `sh run.sh`.
 
 ## Add a New Algorithm
 
 Add a package inside `algorithms`, such as `bully` and `raft`. You must implement a builder from the format 
 
 ```go
-func(*config.Config, *state.State, *client.Client) types.Algorithm
+func(*types.Config, *state.State, *client.Client) types.Algorithm
 ```
 
 Then, add this builder to the list at `algorithms/algorithms.go`. It will the be used by the rest of the code.

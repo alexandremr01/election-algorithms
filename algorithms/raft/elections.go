@@ -4,9 +4,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/alexandremr01/user-elections/algorithms/types"
+	"github.com/alexandremr01/user-elections/types"
 	"github.com/alexandremr01/user-elections/client"
-	"github.com/alexandremr01/user-elections/config"
 	"github.com/alexandremr01/user-elections/state"
 )
 
@@ -25,7 +24,7 @@ type Elections struct {
 	server           *Server
 }
 
-func NewElections(conf *config.Config, state *state.State, connection *client.Client) types.Algorithm {
+func NewElections(conf *types.Config, state *state.State, connection *client.Client) types.Algorithm {
 	alg := &Elections{
 		CurrentTerm:      0,
 		VotedFor:         -1,
