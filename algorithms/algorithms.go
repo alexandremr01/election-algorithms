@@ -5,9 +5,9 @@ import (
 
 	"github.com/alexandremr01/user-elections/algorithms/bully"
 	"github.com/alexandremr01/user-elections/algorithms/raft"
-	"github.com/alexandremr01/user-elections/types"
 	"github.com/alexandremr01/user-elections/client"
 	"github.com/alexandremr01/user-elections/state"
+	"github.com/alexandremr01/user-elections/types"
 )
 
 type AlgorithmBuilder func(*types.Config, *state.State, *client.Client) types.Algorithm

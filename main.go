@@ -7,14 +7,14 @@ import (
 	"net"
 	"net/http"
 	"net/rpc"
-	"time"
 	"os"
+	"time"
 
 	"github.com/alexandremr01/user-elections/algorithms"
-	"github.com/alexandremr01/user-elections/types"
 	"github.com/alexandremr01/user-elections/client"
 	"github.com/alexandremr01/user-elections/config"
 	"github.com/alexandremr01/user-elections/state"
+	"github.com/alexandremr01/user-elections/types"
 )
 
 func main() {
@@ -23,7 +23,7 @@ func main() {
 	if err != nil {
 		log.Fatal("error parsing config: ", err)
 	}
-	
+
 	// build necessary dependencies
 	connection := client.NewClient(config.NodeID, config.Addresses)
 	state := state.NewState()
@@ -60,8 +60,8 @@ func mainLoop(algorithm types.Algorithm, state *state.State, config *types.Confi
 type cliArguments struct {
 	configFile    string
 	algorithmName string
-	id int
-	port string
+	id            int
+	port          string
 }
 
 func parseCLI() *cliArguments {
@@ -80,10 +80,10 @@ func parseCLI() *cliArguments {
 	id := flag.Int("id", 1, "Node ID")
 	flag.Parse()
 	return &cliArguments{
-		configFile: *configFile, 
+		configFile:    *configFile,
 		algorithmName: *algorithmName,
-		port: *port,
-		id: *id,
+		port:          *port,
+		id:            *id,
 	}
 }
 

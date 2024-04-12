@@ -16,6 +16,6 @@ type Config struct {
 	Port              string
 	Addresses         map[int]string
 	IDs               []int
-	NodeID int
-	AlgorithmName string
+	NodeID            int
+	AlgorithmName     string
 }

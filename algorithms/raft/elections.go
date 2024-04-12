@@ -4,9 +4,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/alexandremr01/user-elections/types"
 	"github.com/alexandremr01/user-elections/client"
 	"github.com/alexandremr01/user-elections/state"
+	"github.com/alexandremr01/user-elections/types"
 )
 
 type Elections struct {

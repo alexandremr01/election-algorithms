@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"time"
+
 	"github.com/alexandremr01/user-elections/types"
 )
 
@@ -82,7 +83,7 @@ func GetConfig() (*types.Config, error) {
 		Addresses:         addresses,
 		IDs:               ids,
 		Port:              cliArguments.port,
-		NodeID: cliArguments.id,
-		AlgorithmName: cliArguments.algorithmName,
+		NodeID:            cliArguments.id,
+		AlgorithmName:     cliArguments.algorithmName,
 	}, nil
 }

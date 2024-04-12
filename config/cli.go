@@ -1,16 +1,17 @@
 package config
 
 import (
-	"fmt"
 	"flag"
+	"fmt"
+
 	"github.com/alexandremr01/user-elections/algorithms"
 )
 
 type cliArguments struct {
 	configFile    string
 	algorithmName string
-	id int
-	port string
+	id            int
+	port          string
 }
 
 func parseCLI() *cliArguments {
@@ -29,9 +30,9 @@ func parseCLI() *cliArguments {
 	id := flag.Int("id", 1, "Node ID")
 	flag.Parse()
 	return &cliArguments{
-		configFile: *configFile, 
+		configFile:    *configFile,
 		algorithmName: *algorithmName,
-		port: *port,
-		id: *id,
+		port:          *port,
+		id:            *id,
 	}
 }
