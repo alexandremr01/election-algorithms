@@ -39,7 +39,7 @@ func main() {
 }
 
 func mainLoop(algorithm types.Algorithm, state *state.State, config *types.Config) {
-	log.Printf("My ID: %d, My PID: %d\n", config.NodeID, os.Getpid())
+	log.Printf("Node %d: My PID: %d\n", config.NodeID, os.Getpid())
 	algorithm.InitializeNode()
 	for {
 		if config.NodeID == state.CoordinatorID {
@@ -47,8 +47,15 @@ func mainLoop(algorithm types.Algorithm, state *state.State, config *types.Confi
 			time.Sleep(config.HeartbeatDuration)
 		} else {
 			time.Sleep(config.TimeoutDuration)
-			if (state.LastHearbeat == nil) || (time.Now().Sub(*state.LastHearbeat) > config.TimeoutDuration) {
-				log.Printf("Node %s: Leader timed out", config.NodeID)
+
+			heartbeatTimedout := false
+			hasHeartbeat := state.LastHearbeat != nil
+			if hasHeartbeat {
+				heartbeatTimedout = time.Since(*state.LastHearbeat) > config.TimeoutDuration
+			}
+
+			if !hasHeartbeat || heartbeatTimedout {
+				log.Printf("Node %d: Leader timed out", config.NodeID)
 				algorithm.StartElections()
 			}
 		}

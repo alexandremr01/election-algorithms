@@ -32,10 +32,10 @@ func (c *Client) Broadcast(ids []int, serviceMethod string, args any) {
 func (c *Client) Send(id int, serviceMethod string, args any, resp any) {
 	// tries to connect - not guaranteed
 	if c.clients[id] == nil {
-		client, err := rpc.DialHTTP("tcp", c.addresses[id])
-		if err == nil {
-			log.Printf("Connection established with node %d at address %s", id, c.addresses[id])
-		}
+		client, _ := rpc.DialHTTP("tcp", c.addresses[id])
+		// if err == nil {
+		// 	log.Printf("Connection established with node %d at address %s", id, c.addresses[id])
+		// }
 		c.clients[id] = client
 	}
 	if c.clients[id] != nil {

@@ -31,7 +31,6 @@ func (s *Server) SendHeartbeat(args *HearbeatArgs, _ *int64) error {
 	return nil
 }
 
-// TODO: do we need this or can we use the responde from the CallForElection RPC?
 func (s *Server) RespondElection(args *RespondElectionArgs, _ *int64) error {
 	log.Printf("Node %d: Received OK from node %d\n", s.NodeID, args.Sender)
 	s.Elections.Answered = true
