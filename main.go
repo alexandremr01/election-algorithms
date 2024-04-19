@@ -16,7 +16,7 @@ import (
 )
 
 func main() {
-	// get config from CLI, json and env vars
+	// get config from CLI and JSON
 	config, err := config.GetConfig()
 	if err != nil {
 		log.Fatal("error parsing config: ", err)

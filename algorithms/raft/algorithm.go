@@ -67,9 +67,9 @@ func (e *Elections) StartElections() {
 		}
 	}
 
-	time.Sleep(e.electionDuration)
+	// time.Sleep(e.electionDuration)
 	if !e.Happening {
-		log.Printf("Finished aborted election")
+		log.Printf("Node %d: Finished aborted election", e.nodeID)
 		return
 	}
 

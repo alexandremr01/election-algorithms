@@ -31,11 +31,11 @@ func (s *Server) AppendEntries(args *AppendEntriesArgs, _ *int64) error {
 		s.Elections.Interrupt()
 		now := time.Now()
 		s.state.LastHearbeat = &now
+		s.state.CoordinatorID = args.Sender
 		message += fmt.Sprintf("Node %d: Received heartbeat from node %d", s.NodeID, args.Sender)
 	}
 	if args.Term > s.Elections.CurrentTerm {
 		s.Elections.CurrentTerm = args.Term
-		s.state.CoordinatorID = args.Sender
 		message += fmt.Sprintf("Updated term to %d", args.Term)
 	}
 	if args.Term < s.Elections.CurrentTerm {

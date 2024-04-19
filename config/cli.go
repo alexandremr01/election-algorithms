@@ -3,15 +3,19 @@ package config
 import (
 	"flag"
 	"fmt"
+	"time"
 
 	"github.com/alexandremr01/user-elections/algorithms"
 )
 
 type cliArguments struct {
-	configFile    string
-	algorithmName string
-	id            int
-	port          string
+	configFile                string
+	algorithmName             string
+	id                        int
+	port                      string
+	nodeTimeoutDuration       time.Duration
+	heartbeatIntervalDuration time.Duration
+	electionTimeoutDuration   time.Duration
 }
 
 func parseCLI() *cliArguments {
@@ -28,11 +32,22 @@ func parseCLI() *cliArguments {
 	configFile := flag.String("config", "config.json", "Configuration file")
 	port := flag.String("port", "8000", "Port to connect")
 	id := flag.Int("id", 1, "Node ID")
+	nodeTimeout := flag.Int("node_timeout", 2000, "Node Timeout")
+	heartbeatInterval := flag.Int("heartbeat_interval", 2000, "Hearbeat Interval")
+	electionTimeout := flag.Int("election_timeout", 5000, "Election Timeout")
+
+	heartbeatIntervalDuration := time.Duration(*heartbeatInterval) * time.Millisecond
+	nodeTimeoutDuration := time.Duration(*nodeTimeout) * time.Millisecond
+	electionTimeoutDuration := time.Duration(*electionTimeout) * time.Millisecond
+
 	flag.Parse()
 	return &cliArguments{
-		configFile:    *configFile,
-		algorithmName: *algorithmName,
-		port:          *port,
-		id:            *id,
+		configFile:                *configFile,
+		algorithmName:             *algorithmName,
+		port:                      *port,
+		id:                        *id,
+		nodeTimeoutDuration:       nodeTimeoutDuration,
+		heartbeatIntervalDuration: heartbeatIntervalDuration,
+		electionTimeoutDuration:   electionTimeoutDuration,
 	}
 }
