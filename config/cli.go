@@ -16,6 +16,8 @@ type cliArguments struct {
 	nodeTimeoutDuration       time.Duration
 	heartbeatIntervalDuration time.Duration
 	electionTimeoutDuration   time.Duration
+	autoFailure               int
+	autoFailureDuration       time.Duration
 }
 
 func parseCLI() *cliArguments {
@@ -35,12 +37,15 @@ func parseCLI() *cliArguments {
 	nodeTimeout := flag.Int("node_timeout", 2000, "Node Timeout")
 	heartbeatInterval := flag.Int("heartbeat_interval", 2000, "Hearbeat Interval")
 	electionTimeout := flag.Int("election_timeout", 5000, "Election Timeout")
+	autoFailure := flag.Int("autofailure", 0, "Chance of automatic failure in %")
+	autoFailureInterval := flag.Int("autofailure_duration", 0, "Duration of autofailure")
 
+	flag.Parse()
+	autoFailureIntervalDuration := time.Duration(*autoFailureInterval) * time.Millisecond
 	heartbeatIntervalDuration := time.Duration(*heartbeatInterval) * time.Millisecond
 	nodeTimeoutDuration := time.Duration(*nodeTimeout) * time.Millisecond
 	electionTimeoutDuration := time.Duration(*electionTimeout) * time.Millisecond
 
-	flag.Parse()
 	return &cliArguments{
 		configFile:                *configFile,
 		algorithmName:             *algorithmName,
@@ -49,5 +54,7 @@ func parseCLI() *cliArguments {
 		nodeTimeoutDuration:       nodeTimeoutDuration,
 		heartbeatIntervalDuration: heartbeatIntervalDuration,
 		electionTimeoutDuration:   electionTimeoutDuration,
+		autoFailure:               *autoFailure,
+		autoFailureDuration:       autoFailureIntervalDuration,
 	}
 }

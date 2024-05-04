@@ -10,12 +10,14 @@ type Algorithm interface {
 }
 
 type Config struct {
-	TimeoutDuration   time.Duration
-	ElectionDuration  time.Duration
-	HeartbeatDuration time.Duration
-	Port              string
-	Addresses         map[int]string
-	IDs               []int
-	NodeID            int
-	AlgorithmName     string
+	TimeoutDuration     time.Duration
+	ElectionDuration    time.Duration
+	HeartbeatDuration   time.Duration
+	Port                string
+	Addresses           map[int]string
+	IDs                 []int
+	NodeID              int
+	AlgorithmName       string
+	AutoFailure         int
+	AutoFailureDuration time.Duration
 }

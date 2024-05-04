@@ -12,6 +12,7 @@ x-common:
     - elections
   volumes:
     - .:/app
+  restart: on-failure
   command: sh run_container.sh
   environment:
     &common-env

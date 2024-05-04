@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"math/rand"
 	"net"
 	"net/http"
 	"net/rpc"
@@ -43,6 +44,14 @@ func mainLoop(algorithm types.Algorithm, state *state.State, config *types.Confi
 	algorithm.InitializeNode()
 	for {
 		if config.NodeID == state.CoordinatorID {
+			// automatic failure with chance config.AutoFailure %
+			r := rand.Float32()
+			if r < (float32(config.AutoFailure) / 100) {
+				log.Printf("Node %d: process stuck", config.NodeID)
+				time.Sleep(config.AutoFailureDuration)
+				log.Fatalf("Node %d: process failed", config.NodeID)
+			}
+
 			algorithm.SendHeartbeat()
 			time.Sleep(config.HeartbeatDuration)
 		} else {

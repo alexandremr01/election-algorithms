@@ -58,13 +58,15 @@ func GetConfig() (*types.Config, error) {
 	}
 
 	return &types.Config{
-		HeartbeatDuration: cliArguments.heartbeatIntervalDuration,
-		TimeoutDuration:   cliArguments.nodeTimeoutDuration,
-		ElectionDuration:  cliArguments.electionTimeoutDuration,
-		Addresses:         addresses,
-		IDs:               ids,
-		Port:              cliArguments.port,
-		NodeID:            cliArguments.id,
-		AlgorithmName:     cliArguments.algorithmName,
+		HeartbeatDuration:   cliArguments.heartbeatIntervalDuration,
+		TimeoutDuration:     cliArguments.nodeTimeoutDuration,
+		ElectionDuration:    cliArguments.electionTimeoutDuration,
+		Addresses:           addresses,
+		IDs:                 ids,
+		Port:                cliArguments.port,
+		NodeID:              cliArguments.id,
+		AlgorithmName:       cliArguments.algorithmName,
+		AutoFailure:         cliArguments.autoFailure,
+		AutoFailureDuration: cliArguments.autoFailureDuration,
 	}, nil
 }
