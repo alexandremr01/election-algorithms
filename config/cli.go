@@ -32,7 +32,7 @@ func parseCLI() *cliArguments {
 	// get command line arguments
 	algorithmName := flag.String("algorithm", "raft", algorithmHelp)
 	configFile := flag.String("config", "config.json", "Configuration file")
-	port := flag.String("port", "8000", "Port to connect")
+	port := flag.String("port", "", "Port to connect")
 	id := flag.Int("id", 1, "Node ID")
 	nodeTimeout := flag.Int("node_timeout", 2000, "Node Timeout")
 	heartbeatInterval := flag.Int("heartbeat_interval", 2000, "Hearbeat Interval")

@@ -20,15 +20,6 @@ func NewClient(nodeID int, addresses map[int]string) *Client {
 	}
 }
 
-func (c *Client) Broadcast(ids []int, serviceMethod string, args any) {
-	for _, id := range ids {
-		if id == c.nodeID {
-			continue
-		}
-		c.Send(id, serviceMethod, args, nil)
-	}
-}
-
 func (c *Client) Send(id int, serviceMethod string, args any, resp any) {
 	// tries to connect - not guaranteed
 	if c.clients[id] == nil {
@@ -45,5 +36,15 @@ func (c *Client) Send(id int, serviceMethod string, args any, resp any) {
 		} else if err != nil {
 			log.Print("error trying to talk to", id, err)
 		}
+	}
+}
+
+// Broadcast sends the same message with the same parameters to all ids
+func (c *Client) Broadcast(ids []int, serviceMethod string, args any) {
+	for _, id := range ids {
+		if id == c.nodeID {
+			continue
+		}
+		c.Send(id, serviceMethod, args, nil)
 	}
 }
