@@ -4,10 +4,17 @@ Extensible comparison of election algorithms. Currently we have implemented raft
 
 ## Running
 
-It can wither be run as
+It can wither be run through Docker or locally.
 
 - One node per docker container, using `docker compose up`;
-- One node per process, using `sh run.sh`.
+
+Locally the step by step is:
+
+1. Initialize one node per process, using `bash run_process.sh bully`.
+2. Kill processes with `bash kill_process.sh 4`.
+3. Start processes again with `bash run_process.sh bully 4`.
+4. Kill remaining processes with `bash kill_process.sh all`.
+
 
 ## Development
 
