@@ -4,7 +4,7 @@ NODE_ID=$1
 
 kill_process() {
     local NODE_ID=$1
-    local PID_FILE="tmp/process_${NODE_ID}_pid.txt"
+    local PID_FILE="tmp/node_${NODE_ID}_pid.txt"
 
     if [ ! -f "$PID_FILE" ]; then
         echo "PID file $PID_FILE does not exist."

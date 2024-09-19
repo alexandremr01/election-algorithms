@@ -12,7 +12,6 @@ import (
 	"github.com/alexandremr01/user-elections/algorithms"
 	"github.com/alexandremr01/user-elections/client"
 	"github.com/alexandremr01/user-elections/config"
-	"github.com/alexandremr01/user-elections/state"
 	"github.com/alexandremr01/user-elections/types"
 )
 
@@ -25,7 +24,7 @@ func main() {
 
 	// build necessary dependencies
 	connection := client.NewClient(config.NodeID, config.Addresses)
-	state := state.NewState()
+	state := types.NewState()
 	algorithm, err := algorithms.GetAlgorithm(config.AlgorithmName, config, state, connection)
 	if err != nil {
 		log.Fatalf("%s", err)
@@ -39,7 +38,7 @@ func main() {
 	registerAndServe(server, config.Port)
 }
 
-func mainLoop(algorithm types.Algorithm, state *state.State, config *types.Config) {
+func mainLoop(algorithm types.Algorithm, state *types.State, config *types.Config) {
 	log.Printf("Node %d: My PID: %d\n", config.NodeID, os.Getpid())
 	algorithm.InitializeNode()
 	for {

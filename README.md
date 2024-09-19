@@ -15,10 +15,9 @@ Locally the step by step is:
 3. Start processes again with `bash run_process.sh bully 4`.
 4. Kill remaining processes with `bash kill_process.sh all`.
 
-
 ## Development
 
-For development, you can open one of the process in interactive mode through `docker compose run -it p1 bash` and then `go run main.go --algorithm raft`. After any changes, we do 
+For development, you can open one of the processes in interactive mode through `docker compose run -it p1 bash` and then `go run main.go --algorithm raft`. After any changes, we do 
 
 ```
 go fmt ./...

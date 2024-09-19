@@ -5,14 +5,13 @@ import (
 	"time"
 
 	"github.com/alexandremr01/user-elections/client"
-	"github.com/alexandremr01/user-elections/state"
 	"github.com/alexandremr01/user-elections/types"
 )
 
 type Elections struct {
 	Happening bool
 	Answered  bool
-	state     *state.State
+	state     *types.State
 
 	connection *client.Client
 
@@ -23,7 +22,7 @@ type Elections struct {
 	server           *Server
 }
 
-func NewElections(conf *types.Config, state *state.State, connection *client.Client) types.Algorithm {
+func NewElections(conf *types.Config, state *types.State, connection *client.Client) types.Algorithm {
 	var higherIDs []int
 	ids := conf.IDs
 	for _, id := range ids {

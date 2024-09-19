@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/alexandremr01/user-elections/client"
-	"github.com/alexandremr01/user-elections/state"
 	"github.com/alexandremr01/user-elections/types"
 )
 
@@ -20,11 +19,11 @@ type Elections struct {
 	nodeID           int
 	electionDuration time.Duration
 	ids              []int
-	state            *state.State
+	state            *types.State
 	server           *Server
 }
 
-func NewElections(conf *types.Config, state *state.State, connection *client.Client) types.Algorithm {
+func NewElections(conf *types.Config, state *types.State, connection *client.Client) types.Algorithm {
 	alg := &Elections{
 		CurrentTerm:      0,
 		VotedFor:         -1,

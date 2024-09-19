@@ -6,14 +6,14 @@ import (
 	"time"
 
 	"github.com/alexandremr01/user-elections/client"
-	"github.com/alexandremr01/user-elections/state"
+	"github.com/alexandremr01/user-elections/types"
 )
 
 type Server struct {
 	NodeID    int
 	Client    *client.Client
 	Elections *Elections
-	state     *state.State
+	state     *types.State
 }
 
 type AppendEntriesArgs struct {
@@ -21,7 +21,7 @@ type AppendEntriesArgs struct {
 	Sender int
 }
 
-func NewServer(nodeID int, client *client.Client, elections *Elections, state *state.State) *Server {
+func NewServer(nodeID int, client *client.Client, elections *Elections, state *types.State) *Server {
 	return &Server{NodeID: nodeID, Client: client, Elections: elections, state: state}
 }
 

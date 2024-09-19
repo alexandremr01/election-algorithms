@@ -22,7 +22,7 @@ if [ -z "$NODE_ID" ] # if second parameter is not set, then run all
 
         # writes PID of the last background process to file
         pid=$!
-        echo $pid > "tmp/process_${id}_pid.txt"
+        echo $pid > "tmp/node_${id}_pid.txt"
     done
 
 
