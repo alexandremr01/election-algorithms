@@ -52,7 +52,7 @@ func (s *Server) CallForElection(args *ElectionArgs, _ *int64) error {
 		nil,
 	)
 	if !s.Elections.Happening {
-		s.Elections.StartElections()
+		s.Elections.startElections()
 	}
 	return nil
 }

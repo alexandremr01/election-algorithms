@@ -3,8 +3,8 @@ package types
 import "time"
 
 type Algorithm interface {
-	InitializeNode()
-	StartElections()
+	OnInitialization()
+	OnLeaderTimeout()
 	SendHeartbeat()
 	GetServer() any
 }

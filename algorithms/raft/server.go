@@ -28,14 +28,14 @@ func NewServer(nodeID int, client *client.Client, elections *Elections, state *t
 func (s *Server) AppendEntries(args *AppendEntriesArgs, _ *int64) error {
 	message := ""
 	if args.Term >= s.Elections.CurrentTerm {
-		s.Elections.Interrupt()
+		s.Elections.interruptElection() // this will step down if candidate
 		now := time.Now()
 		s.state.LastHearbeat = &now
 		s.state.CoordinatorID = args.Sender
 		message += fmt.Sprintf("Node %d: Received heartbeat from node %d", s.NodeID, args.Sender)
 	}
 	if args.Term > s.Elections.CurrentTerm {
-		s.Elections.CurrentTerm = args.Term
+		s.Elections.updateTerm(args.Term)
 		message += fmt.Sprintf("Updated term to %d", args.Term)
 	}
 	if args.Term < s.Elections.CurrentTerm {
@@ -57,10 +57,9 @@ type RequestVoteResponse struct{ VoteGranted bool }
 
 func (s *Server) RequestVote(args *RequestVoteArgs, reply *RequestVoteResponse) error {
 	if args.Term > s.Elections.CurrentTerm {
-		s.Elections.CurrentTerm = args.Term
-		s.Elections.VotedFor = -1
+		s.Elections.updateTerm(args.Term)
 	}
-	willVote := (args.Term >= s.Elections.CurrentTerm) && (s.Elections.VotedFor == -1)
+	willVote := (args.Term == s.Elections.CurrentTerm) && (s.Elections.VotedFor == -1)
 	log.Printf(
 		"Node %d: Received vote request from node %d for term %d, voting %t\n",
 		s.NodeID, args.Sender, args.Term, willVote,

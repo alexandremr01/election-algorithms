@@ -40,7 +40,7 @@ func main() {
 
 func mainLoop(algorithm types.Algorithm, state *types.State, config *types.Config) {
 	log.Printf("Node %d: My PID: %d\n", config.NodeID, os.Getpid())
-	algorithm.InitializeNode()
+	algorithm.OnInitialization()
 	for {
 		if config.NodeID == state.CoordinatorID {
 			// automatic failure with chance config.AutoFailure %
@@ -64,7 +64,7 @@ func mainLoop(algorithm types.Algorithm, state *types.State, config *types.Confi
 
 			if !hasHeartbeat || heartbeatTimedout {
 				log.Printf("Node %d: Leader timed out", config.NodeID)
-				algorithm.StartElections()
+				algorithm.OnLeaderTimeout()
 			}
 		}
 	}

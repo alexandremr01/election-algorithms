@@ -46,11 +46,15 @@ func NewElections(conf *types.Config, state *types.State, connection *client.Cli
 	return alg
 }
 
-func (e *Elections) InitializeNode() {
-	e.StartElections()
+func (e *Elections) OnInitialization() {
+	e.startElections()
 }
 
-func (e *Elections) StartElections() {
+func (e *Elections) OnLeaderTimeout() {
+	e.startElections()
+}
+
+func (e *Elections) startElections() {
 	e.Answered = false
 	e.Happening = true
 

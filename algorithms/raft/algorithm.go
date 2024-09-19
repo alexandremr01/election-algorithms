@@ -40,11 +40,11 @@ func NewElections(conf *types.Config, state *types.State, connection *client.Cli
 }
 
 // RAFT has no action on startup: it will follow the current leader
-func (e *Elections) InitializeNode() {
+func (e *Elections) OnInitialization() {
 
 }
 
-func (e *Elections) StartElections() {
+func (e *Elections) OnLeaderTimeout() {
 	e.Happening = true
 	e.CurrentTerm++
 	e.VotesCount = 1
@@ -66,7 +66,6 @@ func (e *Elections) StartElections() {
 		}
 	}
 
-	// time.Sleep(e.electionDuration)
 	if !e.Happening {
 		log.Printf("Node %d: Finished aborted election", e.nodeID)
 		return
@@ -79,7 +78,7 @@ func (e *Elections) StartElections() {
 	} else {
 		log.Printf("Node %d: Election finished without a victory.", e.nodeID)
 	}
-	e.Interrupt()
+	e.interruptElection()
 }
 
 func (e *Elections) SendHeartbeat() {
@@ -90,11 +89,16 @@ func (e *Elections) SendHeartbeat() {
 	)
 }
 
-func (e *Elections) Interrupt() {
+func (e *Elections) GetServer() any {
+	return e.server
+}
+
+func (e *Elections) interruptElection() {
 	e.Happening = false
 	e.VotedFor = -1
 }
 
-func (e *Elections) GetServer() any {
-	return e.server
+func (e *Elections) updateTerm(newTerm int) {
+	e.CurrentTerm = newTerm
+	e.interruptElection()
 }
