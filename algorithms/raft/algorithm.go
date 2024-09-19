@@ -8,11 +8,19 @@ import (
 	"github.com/alexandremr01/user-elections/types"
 )
 
+type NodeStatus string
+
+const (
+	CandidateStatus NodeStatus = "CandidateStatus"
+	FollowerStatus  NodeStatus = "FollowerStatus"
+	LeaderStatus    NodeStatus = "LeaderStatus"
+)
+
 type Elections struct {
 	CurrentTerm int
 	VotedFor    int
 	VotesCount  int
-	Happening   bool
+	Status      NodeStatus
 
 	connection *client.Client
 
@@ -33,6 +41,7 @@ func NewElections(conf *types.Config, state *types.State, connection *client.Cli
 		connection:       connection,
 		electionDuration: conf.ElectionDuration,
 		server:           nil,
+		Status:           FollowerStatus,
 	}
 	server := NewServer(conf.NodeID, connection, alg, state)
 	alg.server = server
@@ -45,7 +54,7 @@ func (e *Elections) OnInitialization() {
 }
 
 func (e *Elections) OnLeaderTimeout() {
-	e.Happening = true
+	e.Status = CandidateStatus
 	e.CurrentTerm++
 	e.VotesCount = 1
 	e.VotedFor = e.nodeID
@@ -66,19 +75,24 @@ func (e *Elections) OnLeaderTimeout() {
 		}
 	}
 
-	if !e.Happening {
+	// case 1: received an append entries during elections
+	if e.Status != CandidateStatus {
 		log.Printf("Node %d: Finished aborted election", e.nodeID)
 		return
 	}
 
+	// case 2: win
 	if e.VotesCount > len(e.ids)/2 {
 		e.state.CoordinatorID = e.nodeID
 		log.Printf("Node %d: Election finished with victory, becoming leader.", e.nodeID)
 		e.SendHeartbeat()
+		e.Status = LeaderStatus
 	} else {
+		// case 3: no victory
 		log.Printf("Node %d: Election finished without a victory.", e.nodeID)
+		e.Status = FollowerStatus
 	}
-	e.interruptElection()
+	e.VotedFor = -1
 }
 
 func (e *Elections) SendHeartbeat() {
@@ -93,12 +107,7 @@ func (e *Elections) GetServer() any {
 	return e.server
 }
 
-func (e *Elections) interruptElection() {
-	e.Happening = false
-	e.VotedFor = -1
-}
-
 func (e *Elections) updateTerm(newTerm int) {
 	e.CurrentTerm = newTerm
-	e.interruptElection()
+	e.VotedFor = -1
 }

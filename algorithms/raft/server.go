@@ -28,7 +28,6 @@ func NewServer(nodeID int, client *client.Client, elections *Elections, state *t
 func (s *Server) AppendEntries(args *AppendEntriesArgs, _ *int64) error {
 	message := ""
 	if args.Term >= s.Elections.CurrentTerm {
-		s.Elections.interruptElection() // this will step down if candidate
 		now := time.Now()
 		s.state.LastHearbeat = &now
 		s.state.CoordinatorID = args.Sender
@@ -37,6 +36,10 @@ func (s *Server) AppendEntries(args *AppendEntriesArgs, _ *int64) error {
 	if args.Term > s.Elections.CurrentTerm {
 		s.Elections.updateTerm(args.Term)
 		message += fmt.Sprintf("Updated term to %d", args.Term)
+		// the only difference between the different status here: if candidate, step down
+		if s.Elections.Status == CandidateStatus {
+			s.Elections.Status = FollowerStatus
+		}
 	}
 	if args.Term < s.Elections.CurrentTerm {
 		message = fmt.Sprintf(
@@ -58,6 +61,10 @@ type RequestVoteResponse struct{ VoteGranted bool }
 func (s *Server) RequestVote(args *RequestVoteArgs, reply *RequestVoteResponse) error {
 	if args.Term > s.Elections.CurrentTerm {
 		s.Elections.updateTerm(args.Term)
+		// step down
+		if s.Elections.Status == CandidateStatus {
+			s.Elections.Status = FollowerStatus
+		}
 	}
 	willVote := (args.Term == s.Elections.CurrentTerm) && (s.Elections.VotedFor == -1)
 	log.Printf(
